@@ -14,7 +14,7 @@ Mặc định dùng dữ liệu **mô phỏng** (js/sim.js) và chỉ số cơ b
 Chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.
 
 ## Watchlist, ghi chú
-Lưu trong localStorage của trình duyệt (không có server).
+Nhiều danh sách có tên (tạo/đổi tên/xóa). Lưu trong localStorage của trình duyệt (không có server).
 
 ## Tin tức (tùy chọn)
 Tạo `data/news.json`:

@@ -10,9 +10,15 @@ let R=[],MKT=null,NEWS={},state={q:'',sector:'',verdict:'',sort:'total',dir:-1,r
 const mem={};
 const store={get(k,d){try{const v=localStorage.getItem('arrowstock.'+k);return v?JSON.parse(v):d}catch(e){return mem[k]??d}},
   set(k,v){try{localStorage.setItem('arrowstock.'+k,JSON.stringify(v))}catch(e){mem[k]=v}}};
-const WL=()=>store.get('wl',[]);
-const inWL=t=>WL().includes(t);
-function toggleWL(t){const w=WL(),i=w.indexOf(t);i<0?w.push(t):w.splice(i,1);store.set('wl',w);updNav()}
+const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Nhiều watchlist có tên: [{id,name,tickers}] — tự chuyển từ watchlist cũ nếu có */
+function lists(){let L=store.get('lists',null);if(!L){L=[{id:'l1',name:'Watchlist của tôi',tickers:store.get('wl',[])}];store.set('lists',L)}return L}
+const activeId=()=>{const L=lists(),a=store.get('activeList','');return L.find(x=>x.id===a)?a:L[0].id};
+const curList=()=>lists().find(x=>x.id===activeId());
+const WL=()=>curList().tickers,inWL=t=>WL().includes(t);
+function toggleIn(id,t){const L=lists(),l=L.find(x=>x.id===id),i=l.tickers.indexOf(t);i<0?l.tickers.push(t):l.tickers.splice(i,1);store.set('lists',L);updNav()}
+const toggleWL=t=>toggleIn(activeId(),t);
+function nameOk(n,exceptId){n=(n||'').trim().slice(0,30);if(!n)return null;if(lists().some(l=>l.id!==exceptId&&l.name.toLowerCase()===n.toLowerCase())){alert('Tên này đã có, hãy chọn tên khác.');return null}return n}
 function updNav(){const n=WL().length;$('#wlc').textContent=n?`(${n})`:''}
 
 async function load(){
@@ -33,15 +39,15 @@ function normalize(s){
 function route(){
   const h=location.hash.replace(/^#\/?/,'');window.scrollTo(0,0);
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.n===(h==='watchlist'||h==='guide'?h:(R.find(x=>x.m.t===h.toUpperCase())?'x':''))));
-  const r=R.find(x=>x.m.t===h.toUpperCase());
+  window.__wlrefresh=null;const r=R.find(x=>x.m.t===h.toUpperCase());
   if(h==='guide')guide();else if(h==='watchlist')dash(true);else if(r)detail(r);else dash(false);
 }
 addEventListener('hashchange',route);
 
 /* ---------- tiện ích hiển thị ---------- */
-const starBtn=t=>`<button class="star ${inWL(t)?'on':''}" data-star="${t}" title="Thêm/bỏ khỏi Watchlist">${inWL(t)?'★':'☆'}</button>`;
+const starBtn=t=>`<button class="star ${inWL(t)?'on':''}" data-star="${t}" title="Thêm/bỏ khỏi: ${esc(curList().name)}">${inWL(t)?'★':'☆'}</button>`;
 function bindStars(root){root.querySelectorAll('[data-star]').forEach(b=>b.onclick=e=>{e.stopPropagation();toggleWL(b.dataset.star);
-  const on=inWL(b.dataset.star);b.classList.toggle('on',on);b.textContent=on?'★':'☆';if(location.hash==='#/watchlist')rows(true)})}
+  const on=inWL(b.dataset.star);b.classList.toggle('on',on);b.textContent=on?'★':'☆';if(location.hash==='#/watchlist')dash(true);if(window.__wlrefresh)window.__wlrefresh()})}
 const netCell=(x,est)=>est?'<span class="muted">~'+ty(x.s5)+'</span>':`<span class="${cl(x.s5)}">${ty(x.s5)}</span>`;
 const bl=a=>`<ul class="b">${a.map(b=>`<li class="${b.t}">${b.x}</li>`).join('')}</ul>`;
 const subs=o=>`<div class="subs">${Object.entries(o).map(([k,v])=>`<div><span>${k}</span><div class="bar"><i style="width:${v}%;background:${scCol(v)}"></i></div><span>${v.toFixed(0)}</span></div>`).join('')}</div>`;
@@ -58,8 +64,10 @@ function dash(onlyWatch){
   const sects=[...new Set(VN30.map(m=>m.s))].sort();
   const seg=[['sp','#0f9d58'],['p','#7fd3a6'],['n','#b8c8ce'],['ng','#f19b94'],['sn','#d93025']];
   const chips=[['','Tất cả'],['pos','Tích cực'],['neu','Trung lập'],['neg','Tiêu cực'],['burst','Dòng tiền bùng nổ'],['dry','Dòng tiền cạn kiệt'],['nnb','NN mua ròng'],['nns','NN bán ròng'],['tdb','Tự doanh mua ròng']];
-  app.innerHTML=(onlyWatch?`<h2 style="margin:0 0 4px;color:var(--deep)">★ Watchlist của bạn</h2><p class="muted" style="margin:0 0 10px">Danh sách được lưu ngay trên trình duyệt này. Bấm ☆ ở bất kỳ mã nào để thêm.</p>
-    <div class="toolbar" style="margin-top:0"><select id="addsel"><option value="">+ Thêm mã vào Watchlist…</option>${R.filter(r=>!inWL(r.m.t)).map(r=>`<option>${r.m.t}</option>`).join('')}</select></div>`:`
+  app.innerHTML=(onlyWatch?`<div class="toolbar" style="margin-top:0">${lists().map(l=>`<button class="chip ${l.id===activeId()?'on':''}" data-list="${l.id}">${esc(l.name)} (${l.tickers.length})</button>`).join('')}<button class="chip" id="newList">+ Tạo list mới</button></div>
+    <div class="wl-head"><h2>★ ${esc(curList().name)}</h2><button class="chip" id="renList">✎ Đổi tên</button><button class="chip" id="delList">🗑 Xóa list</button></div>
+    <p class="muted" style="margin:0 0 10px">Bấm ☆ ở bất kỳ mã nào để thêm/bỏ khỏi list đang chọn. Lưu ngay trên trình duyệt này.</p>
+    <div class="toolbar" style="margin-top:0"><select id="addsel"><option value="">+ Thêm mã vào “${esc(curList().name)}”…</option>${R.filter(r=>!inWL(r.m.t)).map(r=>`<option>${r.m.t}</option>`).join('')}</select></div>`:`
   <div class="hero"><h1>Nhìn rõ <em>xu hướng</em> &amp; dòng tiền<br>của VN30 + HDG</h1>
     <p>Chấm điểm từng mã theo 4 trụ cột — Cơ bản, Kỹ thuật, Dòng tiền lớn, Tâm lý đám đông — dựa trên MA 20/50/100/200, khối ngoại và tự doanh.</p>
     <div class="acts"><a class="btn" href="#/guide">Hướng dẫn sử dụng</a><a class="btn ghost" href="#/watchlist">★ Mở Watchlist</a></div></div>
@@ -87,7 +95,11 @@ function dash(onlyWatch){
     ${[['t','Mã','l'],['px','Giá'],['d1','%1D'],['d5','%5D'],['d20','%1T'],['phase','Xu hướng','l'],['flow','Dòng tiền','l'],['nn','NN 5D'],['td','TD 5D'],['fa','Cơ bản'],['te','Kỹ thuật'],['fl','DT lớn'],['se','Tâm lý'],['total','Nhận định','l']].map(([k,t,c])=>`<th class="${c||''}" data-s="${k}">${t}${state.sort===k?(state.dir<0?' ▼':' ▲'):''}</th>`).join('')}
   </tr></thead><tbody id="rows"></tbody></table></div>
   <div class="legend">Điểm 0–100: <span class="s-p">■ ≥62 tích cực</span> · <span class="s-n">■ 45–61 trung lập</span> · <span class="s-ng">■ &lt;45 tiêu cực</span>. Tổng hợp = Kỹ thuật 35% + Dòng tiền lớn 25% + Cơ bản 20% + Tâm lý 20%. NN = khối ngoại, TD = tự doanh (mua/bán ròng 5 phiên, tỷ đồng). Bấm một mã để xem chi tiết, bấm ☆ để thêm Watchlist.</div>`;
-  if(onlyWatch){$('#addsel').onchange=e=>{if(e.target.value){toggleWL(e.target.value);dash(true)}}}
+  if(onlyWatch){$('#addsel').onchange=e=>{if(e.target.value){toggleWL(e.target.value);dash(true)}};
+    document.querySelectorAll('[data-list]').forEach(b=>b.onclick=()=>{store.set('activeList',b.dataset.list);updNav();dash(true)});
+    $('#newList').onclick=()=>{const n=nameOk(prompt('Tên danh sách mới (tối đa 30 ký tự):',''));if(!n)return;const L=lists(),id='l'+Date.now();L.push({id,name:n,tickers:[]});store.set('lists',L);store.set('activeList',id);updNav();dash(true)};
+    $('#renList').onclick=()=>{const c=curList(),n=nameOk(prompt('Đổi tên danh sách:',c.name),c.id);if(!n)return;const L=lists();L.find(x=>x.id===c.id).name=n;store.set('lists',L);dash(true)};
+    $('#delList').onclick=()=>{const L=lists();if(L.length<2){alert('Cần giữ lại ít nhất một danh sách.');return}const c=curList();if(!confirm(`Xóa danh sách “${c.name}” (${c.tickers.length} mã)?`))return;store.set('lists',L.filter(x=>x.id!==c.id));store.set('activeList','');updNav();dash(true)}}
   else{
     $('#q').oninput=e=>{state.q=e.target.value;rows(false)};$('#sec').onchange=e=>{state.sector=e.target.value;rows(false)};
     document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{state.verdict=b.dataset.v;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));rows(false)});
@@ -111,7 +123,7 @@ function rows(onlyWatch){
     <td>${netCell(r.fl.fn,e)}</td><td>${e?'<span class="muted">—</span>':netCell(r.fl.pr)}</td>
     <td>${scBar(r.fa.score)}</td><td>${scBar(r.te.score)}</td><td>${scBar(r.fl.score)}</td><td>${scBar(r.se.score)}</td>
     <td class="l"><span class="vd ${r.verdict.k}">${r.verdict.t}</span> </td></tr>`).join('')||
-    `<tr><td colspan="15" class="empty">${onlyWatch?'Watchlist đang trống — chọn mã ở ô “Thêm mã” phía trên hoặc bấm ☆ ở trang Tổng quan.':'Không có mã phù hợp.'}</td></tr>`;
+    `<tr><td colspan="15" class="empty">${onlyWatch?'Danh sách đang trống — chọn mã ở ô “Thêm mã” phía trên hoặc bấm ☆ ở trang Tổng quan.':'Không có mã phù hợp.'}</td></tr>`;
   document.querySelectorAll('#rows tr[data-t]').forEach(tr=>tr.onclick=()=>location.hash='#/'+tr.dataset.t);
   bindStars($('#rows'));
 }
@@ -144,6 +156,7 @@ function detail(r){
   <div class="dh"><div><h1>${m.t} ${starBtn(m.t)}<span class="muted" style="font-size:16px;font-weight:400">${m.n} · ${m.s}${m.x?' · ngoài rổ VN30':''}</span></h1>
     <div><span class="px">${f(r.px)}</span> <span class="${cl(r.d1)}">${sg(r.d1)}</span> <span class="muted">· 5D <b class="${cl(r.d5)}">${sg(r.d5)}</b> · 1T <b class="${cl(r.d20)}">${sg(r.d20)}</b> · Vốn hóa ~${m.cap} nghìn tỷ</span></div></div>
     <div style="display:flex;gap:14px;align-items:center"><span class="vd ${r.verdict.k}" style="font-size:16px;padding:6px 16px">${r.verdict.t}</span><div class="ring" style="--v:${r.total};--c:${col}"><div>${r.total.toFixed(0)}</div></div></div></div>
+  <div class="inl"><span class="muted">Thêm vào danh sách:</span> ${lists().map(l=>`<button class="chip ${l.tickers.includes(m.t)?'on':''}" data-inlist="${l.id}">${esc(l.name)}</button>`).join('')}</div>
   <div class="jump"><a href="#" data-j="s-chart">Biểu đồ</a><a href="#" data-j="s-flow">Khối ngoại &amp; Tự doanh</a><a href="#" data-j="s-an">Phân tích 4 trụ cột</a><a href="#" data-j="s-news">Tin tức &amp; Sự kiện</a><a href="#" data-j="s-note">Ghi chú</a></div>
   <div class="verdict-box" style="--c:${col}"><b>Nhận định tổng hợp.</b> ${r.summary}
     <div class="grid g2" style="margin-top:10px"><div><b class="up">Điểm cộng</b>${bl(r.pos.slice(0,5).map(x=>({t:'pos',x})))}</div><div><b class="dn">Rủi ro</b>${bl(r.neg.slice(0,5).map(x=>({t:'neg',x})))}</div></div></div>
@@ -183,6 +196,9 @@ function detail(r){
   document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{state.range=ch.range=+b.dataset.r;document.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x===b));ch.draw()});
   document.querySelectorAll('[data-j]').forEach(a=>a.onclick=e=>{e.preventDefault();document.getElementById(a.dataset.j).scrollIntoView({behavior:'smooth'})});
   $('#note').oninput=e=>{const n=store.get('notes',{});n[m.t]=e.target.value;store.set('notes',n)};
+  document.querySelectorAll('[data-inlist]').forEach(b=>b.onclick=()=>{toggleIn(b.dataset.inlist,m.t);window.__wlrefresh()});
+  window.__wlrefresh=()=>{const L=lists();document.querySelectorAll('[data-inlist]').forEach(b=>b.classList.toggle('on',L.find(x=>x.id===b.dataset.inlist).tickers.includes(m.t)));
+    document.querySelectorAll('.dh [data-star]').forEach(x=>{const on=inWL(m.t);x.classList.toggle('on',on);x.textContent=on?'★':'☆'})};
   bindStars(app);
 }
 
@@ -198,7 +214,7 @@ function guide(){
   <details><summary>Dòng tiền “Bùng nổ” và “Cạn kiệt”</summary><p>So giá trị giao dịch bình quân 5 phiên với 20 phiên: <b>≥1.8× Bùng nổ</b>, ≥1.25× Tăng, 0.8–1.25× Bình thường, 0.55–0.8× Suy yếu, <b>&lt;0.55× Cạn kiệt</b>. Hệ thống đọc kèm hướng giá: bùng nổ + giá tăng = lực cầu chủ động; bùng nổ + giá giảm = dấu hiệu xả hàng; cạn kiệt sau nhịp giảm = cạn cung, có thể sắp tạo đáy; giá tăng nhưng thanh khoản co lại = phân kỳ, thiếu bền vững.</p></details>
   <details><summary>Khối ngoại &amp; Tự doanh</summary><p>Hiển thị mua/bán ròng (tỷ đồng) theo phiên gần nhất, 5, 10, 20 phiên và so với 20 phiên trước đó để biết lực mua/bán đang <i>tăng tốc</i> hay <i>chậm lại</i>. Nhãn xu hướng: Mua ròng liên tục, Mua ròng, Đảo chiều sang mua, Giảm mua/chốt lời, Bán ròng, Bán ròng liên tục. Khi cả hai cùng mua ròng thì dòng tiền lớn đồng thuận (tích cực); trái chiều thì tín hiệu chưa rõ.</p></details>
   <details><summary>Tâm lý đám đông</summary><p>Chỉ số 0–100 (0 hoảng loạn, 100 cực kỳ hưng phấn) tính từ RSI, tỷ lệ khối lượng phiên tăng/giảm, độ lệch khỏi MA20, đà tăng 10 phiên và biến động. Hưng phấn vừa phải được chấm tốt; hưng phấn cực độ bị trừ điểm vì thường đi trước nhịp chỉnh (tín hiệu ngược đám đông).</p></details>
-  <details><summary>Watchlist &amp; ghi chú</summary><p>Bấm ☆ cạnh mã (ở bảng hoặc trang chi tiết) để thêm vào Watchlist; mở tab “★ Watchlist” để xem riêng, hoặc chọn mã từ ô “Thêm mã”. Mỗi mã có ô ghi chú cá nhân. Dữ liệu lưu trong trình duyệt của bạn (không gửi đi đâu) — xóa dữ liệu trình duyệt hoặc đổi máy sẽ mất.</p></details>
+  <details><summary>Watchlist &amp; ghi chú</summary><p>Mở tab “★ Watchlist” để tạo nhiều danh sách có tên riêng (nút “+ Tạo list mới”), đổi tên hoặc xóa list. Bấm ☆ cạnh mã để thêm/bỏ khỏi list đang chọn; ở trang chi tiết có thể thêm mã vào nhiều list cùng lúc. Mỗi mã có ô ghi chú cá nhân. Dữ liệu lưu trong trình duyệt của bạn (không gửi đi đâu) — xóa dữ liệu trình duyệt hoặc đổi máy sẽ mất.</p></details>
   <details><summary>Tin tức</summary><p>Mỗi mã có các nút mở nhanh tin mới nhất trên Google News, Vietstock, CafeF… và mục “Sự kiện nổi bật” do hệ thống tự rút ra từ dữ liệu giá (breakout, khối lượng đột biến, golden/death cross, khối ngoại mua/bán đột biến). Muốn hiện tin ngay trong trang, thêm vào <code>data/news.json</code>.</p></details>
   <details><summary>Về dữ liệu — đọc kỹ</summary><p>Nếu góc trên bên phải ghi <b>“Dữ liệu MÔ PHỎNG”</b> nghĩa là giá, khối lượng, khối ngoại, tự doanh đều là số giả lập để minh họa giao diện và thuật toán — <b>không dùng để ra quyết định</b>. Chỉ số cơ bản (P/E, ROE…) là số ước chừng. Nạp dữ liệu thật theo hướng dẫn trong README (<code>scripts/fetch_data.py</code> → <code>data/market.json</code>). HDG không thuộc rổ VN30, được thêm riêng để theo dõi. Mọi nhận định chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.</p></details>`;
 }
