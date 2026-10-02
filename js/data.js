@@ -1,4 +1,4 @@
-/* Danh mục VN30 + chỉ số cơ bản MINH HỌA (xấp xỉ, cần thay bằng dữ liệu thật từ BCTC).
+/* Danh mục VN30 + HDG (HDG ngoài rổ VN30, x:1) + chỉ số cơ bản MINH HỌA (xấp xỉ, cần thay bằng dữ liệu thật từ BCTC).
    Trường: t=mã, n=tên, s=ngành, p=giá (nghìn đồng), pe, pb, roe(%), g=tăng trưởng EPS(%),
    dy=cổ tức(%), risk = NPL(%) nếu là ngân hàng, hoặc D/E nếu doanh nghiệp, cap=vốn hóa (nghìn tỷ),
    v=KL giao dịch TB (triệu cp/phiên), vol=biến động ngày điển hình */
@@ -33,4 +33,5 @@ const VN30 = [
  {t:'VNM',n:'Vinamilk',s:'Thực phẩm - Sữa',p:62,pe:15,pb:4.5,roe:28,g:0,dy:5.5,risk:.2,cap:130,v:3,vol:.014},
  {t:'VPB',n:'Ngân hàng VPBank',s:'Ngân hàng',p:27,pe:11,pb:1.4,roe:11,g:45,dy:0,risk:3.2,bank:1,cap:210,v:18,vol:.02},
  {t:'VRE',n:'Vincom Retail',s:'BĐS Bán lẻ',p:30,pe:12,pb:1.5,roe:12,g:10,dy:0,risk:.4,cap:70,v:4,vol:.02}
+ ,{t:'HDG',n:'Tập đoàn Hà Đô',s:'BĐS & Năng lượng',p:25,pe:12,pb:1.3,roe:11,g:10,dy:2,risk:1.1,cap:9,v:1,vol:.022,x:1}
 ];

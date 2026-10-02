@@ -1,4 +1,4 @@
-# ArrowStock — Phân tích xu hướng VN30
+# ArrowStock — Phân tích xu hướng VN30 + HDG
 
 Web tĩnh (HTML/CSS/JS, không cần build). Chạy: `python3 -m http.server 8000` rồi mở http://localhost:8000
 
@@ -12,3 +12,16 @@ Mặc định dùng dữ liệu **mô phỏng** (js/sim.js) và chỉ số cơ b
 `pip install vnstock && python3 scripts/fetch_data.py` → tạo `data/market.json`, web tự nhận. Cần bổ sung khối ngoại/tự doanh và cập nhật chỉ số cơ bản từ BCTC; danh mục VN30 cần đối chiếu kỳ rà soát mới nhất.
 
 Chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.
+
+## Watchlist, ghi chú
+Lưu trong localStorage của trình duyệt (không có server).
+
+## Tin tức (tùy chọn)
+Tạo `data/news.json`:
+```json
+{"HDG":[{"title":"Tiêu đề","url":"https://...","src":"CafeF","date":"2026-10-01"}]}
+```
+Nếu không có file, trang chỉ hiện nút mở tin trên Google News/Vietstock/CafeF… và các sự kiện tự rút ra từ dữ liệu giá.
+
+## Khối ngoại / tự doanh thật
+`data/market.json` nhận thêm `"foreign":[...]` và `"prop":[...]` (tỷ đồng, mua ròng dương, cùng độ dài với `candles`). Thiếu thì web ước tính.

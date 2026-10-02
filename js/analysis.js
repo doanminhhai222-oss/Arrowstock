@@ -4,6 +4,39 @@ const pct=(a,b)=>(a/b-1)*100;
 const labelOf=s=>s>=62?'Tích cực':s>=45?'Trung lập':'Tiêu cực';
 const verdictOf=s=>s>=68?{k:'sp',t:'Tích cực mạnh'}:s>=56?{k:'p',t:'Tích cực'}:s>=44?{k:'n',t:'Trung lập'}:s>=34?{k:'ng',t:'Tiêu cực'}:{k:'sn',t:'Tiêu cực mạnh'};
 
+
+/* Xu hướng mua/bán ròng của một nhóm nhà đầu tư (khối ngoại hoặc tự doanh), đơn vị tỷ đồng. */
+function tradeTrend(a,last){
+  const sum=(i0,i1)=>{let t=0;for(let i=i0;i<=i1;i++)t+=a[i]||0;return t};
+  const s5=sum(last-4,last),s10=sum(last-9,last),s20=sum(last-19,last),p20=sum(last-39,last-20);
+  let streak=0;const sg=Math.sign(a[last]||0);if(sg)for(let i=last;i>=0&&Math.sign(a[i]||0)===sg;i--)streak+=sg;
+  let label;
+  if(s5>0&&s20>0)label=streak>=3?'Mua ròng liên tục':'Mua ròng';
+  else if(s5>0)label='Đảo chiều sang mua';
+  else if(s20>0)label='Giảm mua / chốt lời';
+  else label=streak<=-3?'Bán ròng liên tục':'Bán ròng';
+  const accel=Math.sign(s20)===Math.sign(p20)&&Math.abs(s20)>Math.abs(p20)*1.3?'đang tăng tốc':Math.sign(s20)===Math.sign(p20)&&Math.abs(s20)<Math.abs(p20)*.7?'đang chậm lại':'';
+  return {d1:a[last]||0,s5,s10,s20,p20,streak,label,accel,series:a.slice(last-19,last+1).map(x=>x||0),dir:s5>0&&s20>0?1:s5<0&&s20<0?-1:0};
+}
+/* Sự kiện tự động rút ra từ dữ liệu giá / dòng tiền (không phải tin tức báo chí). */
+function autoEvents(S,s,ma){
+  const {C,last}=S,E=[],vol=C.map(x=>x.v),vm=Ind.sma(vol,20),fl=s.foreign;
+  const fs=Math.sqrt(Ind.avg(fl.map(x=>(x||0)*(x||0)),last-59,last+1))||1;
+  for(let i=last;i>last-60&&i>200;i--){
+    const c=C[i],r=pct(c.c,C[i-1].c),d=c.t.slice(5).split('-').reverse().join('/');
+    if(vm[i-1]&&c.v>2*vm[i-1]&&Math.abs(r)>=1.5)E.push({i,t:r>0?'pos':'neg',x:`${d}: KL đột biến ${(c.v/vm[i-1]).toFixed(1)}× TB20, giá ${r>0?'tăng':'giảm'} ${Math.abs(r).toFixed(1)}%`});
+    const hi=Math.max(...C.slice(i-20,i).map(x=>x.h)),lo=Math.min(...C.slice(i-20,i).map(x=>x.l));
+    if(c.c>hi)E.push({i,t:'pos',x:`${d}: Vượt đỉnh 20 phiên (${hi.toFixed(2)}) — tín hiệu breakout`});
+    if(c.c<lo)E.push({i,t:'neg',x:`${d}: Thủng đáy 20 phiên (${lo.toFixed(2)}) — tín hiệu breakdown`});
+    for(const [a,b] of [[20,50],[50,200]]){const x=ma[a][i]-ma[b][i],y=ma[a][i-1]-ma[b][i-1];
+      if(x>0&&y<=0)E.push({i,t:'pos',x:`${d}: MA${a} cắt lên MA${b} (Golden Cross)`});
+      if(x<0&&y>=0)E.push({i,t:'neg',x:`${d}: MA${a} cắt xuống MA${b} (Death Cross)`})}
+    if(fl[i]>2.5*fs)E.push({i,t:'pos',x:`${d}: Khối ngoại mua ròng đột biến ${fl[i].toFixed(0)} tỷ`});
+    if(fl[i]<-2.5*fs)E.push({i,t:'neg',x:`${d}: Khối ngoại bán ròng đột biến ${Math.abs(fl[i]).toFixed(0)} tỷ`});
+  }
+  return E.sort((a,b)=>b.i-a.i).slice(0,8);
+}
+
 function analyzeFundamental(m){
   const B=[],add=(t,x)=>B.push({t,x});
   const peS=m.pe<8?90:m.pe<12?78:m.pe<16?65:m.pe<22?50:m.pe<30?35:20;
@@ -90,10 +123,15 @@ function analyzeFlow(S,s,I){
   const score=clamp(sc,5,95);
   add(state==='Bùng nổ'?(ret5>=0?'pos':'neg'):state==='Cạn kiệt'||state==='Suy yếu'?'neg':'neu',`GTGD 5 phiên = ${r5.toFixed(2)}× TB 20 phiên (${state}) — ${nuance}`);
   add(r20>=1.15?'pos':r20<=.85?'neg':'neu',`GTGD TB 20 phiên = ${r20.toFixed(2)}× TB 60 phiên`);
-  add(bp10>=1?'pos':bp10<=-1?'neg':'neu',`Dòng tiền lớn (khối ngoại + tự doanh) 10 phiên: ${bm10>=0?'+':''}${bm10.toFixed(0)} tỷ (${bp10.toFixed(1)}% GTGD)`);
+  const fn=tradeTrend(s.foreign,last),pr=tradeTrend(s.prop,last),tag=x=>x.dir>0?'pos':x.dir<0?'neg':'neu',sgn=x=>(x>=0?'+':'')+x.toFixed(0);
+  add(tag(fn),`Khối ngoại: ${fn.label}${fn.accel?' ('+fn.accel+')':''} — 5 phiên ${sgn(fn.s5)} tỷ, 20 phiên ${sgn(fn.s20)} tỷ`);
+  if(!s.est)add(tag(pr),`Tự doanh: ${pr.label}${pr.accel?' ('+pr.accel+')':''} — 5 phiên ${sgn(pr.s5)} tỷ, 20 phiên ${sgn(pr.s20)} tỷ`);
+  if(!s.est&&fn.dir*pr.dir<0)add('neu','Khối ngoại và tự doanh đang đi ngược chiều nhau — tín hiệu dòng tiền lớn chưa đồng thuận');
+  if(!s.est&&fn.dir>0&&pr.dir>0)add('pos','Khối ngoại và tự doanh cùng mua ròng — dòng tiền lớn đồng thuận');
+  if(!s.est&&fn.dir<0&&pr.dir<0)add('neg','Khối ngoại và tự doanh cùng bán ròng — áp lực từ dòng tiền lớn');
   add(acc>dist?'pos':acc<dist?'neg':'neu',`20 phiên: ${acc} phiên gom (tăng + vol lớn) vs ${dist} phiên phân phối (giảm + vol lớn)`);
   add(cmf>.08?'pos':cmf<-.08?'neg':'neu',`CMF20 = ${cmf.toFixed(2)} — ${cmf>.08?'dòng tiền vào':cmf<-.08?'dòng tiền ra':'cân bằng'}; MFI14 = ${mfi.toFixed(0)}`);
-  return {score,label:labelOf(score),bullets:B,state,nuance,r5,r20,bm10,bm20,bp10,acc,dist,cmf,mfi,
+  return {score,label:labelOf(score),bullets:B,state,nuance,r5,r20,bm10,bm20,bp10,acc,dist,cmf,mfi,fn,pr,
     sub:{'CMF':clamp(50+cmf*150),'Khối ngoại+TD':clamp(50+bp10*10),'Gom/Phân phối':clamp(50+(acc-dist)*12)}};
 }
 
@@ -132,5 +170,5 @@ function analyze(m,s){
   const pos=[],neg=[];all.forEach(([k,p])=>p.bullets.forEach(b=>{(b.t==='pos'?pos:b.t==='neg'?neg:[]).push(`[${k}] ${b.x}`)}));
   const summary=`${m.t} được nhận định "${verdict.t}" (${total.toFixed(0)}/100). Kỹ thuật: ${te.phase.toLowerCase()}; dòng tiền: ${fl.state.toLowerCase()}; tâm lý: ${se.lbl.toLowerCase()}; cơ bản: ${fa.label.toLowerCase()}.`;
   const chg=k=>pct(close[n-1],close[n-1-k]);
-  return {m,s,C,ma,I,fa,te,fl,se,total,verdict,pos,neg,summary,px:close[n-1],d1:chg(1),d5:chg(5),d20:chg(20)};
+  return {m,s,C,ma,I,fa,te,fl,se,total,verdict,pos,neg,summary,events:autoEvents(S,s,ma),px:close[n-1],d1:chg(1),d5:chg(5),d20:chg(20)};
 }
