@@ -33,14 +33,14 @@ main{max-width:1440px;margin:0 auto;padding:20px 24px}
 .chip{border:1px solid var(--line);background:#fff;color:var(--mut);border-radius:99px;padding:5px 12px;cursor:pointer;font:inherit;font-size:13px}
 .chip:hover{border-color:var(--acc)}.chip.on{color:#fff;border-color:var(--deep);background:var(--deep)}
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 2px 12px #0b3c4912}
-table{border-collapse:collapse;width:100%;min-width:1150px}
-th,td{padding:9px 7px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 5px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
 th{position:sticky;top:0;background:#e3f1f1;color:var(--mut);font-size:12px;font-weight:700;cursor:pointer;user-select:none}
 th:hover{color:var(--tx)}th.l,td.l{text-align:left}
 tbody tr{cursor:pointer}tbody tr:hover{background:#e8f6f6}
-.tk{font-weight:800;color:var(--deep)}.tn{font-size:11px;color:var(--mut);max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.tk{font-weight:800;color:var(--deep)}.tn{font-size:11px;color:var(--mut);max-width:105px;overflow:hidden;text-overflow:ellipsis}
 .star{border:0;background:none;cursor:pointer;font-size:18px;color:#b9cdd1;padding:0 2px;line-height:1}.star.on{color:var(--gold)}.star:hover{color:var(--gold)}
-.sc{display:inline-flex;align-items:center;gap:5px;width:70px}.sc span{width:24px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.sc{display:inline-flex;align-items:center;gap:4px;width:58px}.sc span{width:20px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
 .sc i{display:block;height:6px;border-radius:3px;flex:1;background:linear-gradient(90deg,currentColor var(--w),var(--line) var(--w))}
 .s-p{color:var(--up)}.s-n{color:#d89a1d}.s-ng{color:var(--dn)}
 .vd{display:inline-block;padding:3px 10px;border-radius:99px;font-weight:700;font-size:12px}
@@ -87,3 +87,8 @@ details p,details li{color:#2c4a55}
 .steps li:before{content:counter(s);position:absolute;left:14px;top:14px;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#ffd978,#e0a526);display:grid;place-items:center;font-weight:800;color:#3b2a00}
 table.gl{min-width:0}table.gl td{text-align:left;white-space:normal}
 .empty{padding:40px;text-align:center;color:var(--mut)}
+
+td.ph{white-space:normal;min-width:90px;max-width:130px;line-height:1.3}
+.vd{padding:2px 8px;font-size:11.5px}
+.tag{display:none}.tk .tag{display:inline-block}
+@media(max-width:1250px){table th:nth-child(6),table td:nth-child(6){display:none}.tn{display:none}}

@@ -84,9 +84,9 @@ function dash(onlyWatch){
     ${chips.map(([k,t])=>`<button class="chip ${state.verdict===k?'on':''}" data-v="${k}">${t}</button>`).join('')}
   </div>`)+`
   <div class="tw"><table><thead><tr><th></th>
-    ${[['t','Mã','l'],['px','Giá'],['d1','%1D'],['d5','%5D'],['d20','%1T'],['phase','Xu hướng','l'],['flow','Dòng tiền','l'],['nn','NN 5D (tỷ)'],['td','TD 5D (tỷ)'],['fa','Cơ bản'],['te','Kỹ thuật'],['fl','DT lớn'],['se','Tâm lý'],['total','Nhận định','l']].map(([k,t,c])=>`<th class="${c||''}" data-s="${k}">${t}${state.sort===k?(state.dir<0?' ▼':' ▲'):''}</th>`).join('')}
+    ${[['t','Mã','l'],['px','Giá'],['d1','%1D'],['d5','%5D'],['d20','%1T'],['phase','Xu hướng','l'],['flow','Dòng tiền','l'],['nn','NN 5D'],['td','TD 5D'],['fa','Cơ bản'],['te','Kỹ thuật'],['fl','DT lớn'],['se','Tâm lý'],['total','Nhận định','l']].map(([k,t,c])=>`<th class="${c||''}" data-s="${k}">${t}${state.sort===k?(state.dir<0?' ▼':' ▲'):''}</th>`).join('')}
   </tr></thead><tbody id="rows"></tbody></table></div>
-  <div class="legend">Điểm 0–100: <span class="s-p">■ ≥62 tích cực</span> · <span class="s-n">■ 45–61 trung lập</span> · <span class="s-ng">■ &lt;45 tiêu cực</span>. Tổng hợp = Kỹ thuật 35% + Dòng tiền lớn 25% + Cơ bản 20% + Tâm lý 20%. NN = khối ngoại, TD = tự doanh (mua/bán ròng 5 phiên). Bấm một mã để xem chi tiết, bấm ☆ để thêm Watchlist.</div>`;
+  <div class="legend">Điểm 0–100: <span class="s-p">■ ≥62 tích cực</span> · <span class="s-n">■ 45–61 trung lập</span> · <span class="s-ng">■ &lt;45 tiêu cực</span>. Tổng hợp = Kỹ thuật 35% + Dòng tiền lớn 25% + Cơ bản 20% + Tâm lý 20%. NN = khối ngoại, TD = tự doanh (mua/bán ròng 5 phiên, tỷ đồng). Bấm một mã để xem chi tiết, bấm ☆ để thêm Watchlist.</div>`;
   if(onlyWatch){$('#addsel').onchange=e=>{if(e.target.value){toggleWL(e.target.value);dash(true)}}}
   else{
     $('#q').oninput=e=>{state.q=e.target.value;rows(false)};$('#sec').onchange=e=>{state.sector=e.target.value;rows(false)};
@@ -106,11 +106,11 @@ function rows(onlyWatch){
   $('#rows').innerHTML=L.map(r=>`<tr data-t="${r.m.t}"><td>${starBtn(r.m.t)}</td>
     <td class="l"><div class="tk">${r.m.t}${r.m.x?'<span class="tag">ngoài VN30</span>':''}</div><div class="tn">${r.m.n}</div></td>
     <td>${f(r.px)}</td><td class="${cl(r.d1)}">${sg(r.d1)}</td><td class="${cl(r.d5)}">${sg(r.d5)}</td><td class="${cl(r.d20)}">${sg(r.d20)}</td>
-    <td class="l">${r.te.phase}</td>
+    <td class="l ph">${r.te.phase}</td>
     <td class="l"><span class="fs ${flowCls(r.fl.state)}">${r.fl.state}</span> <span class="muted">${r.fl.r5.toFixed(2)}×</span></td>
     <td>${netCell(r.fl.fn,e)}</td><td>${e?'<span class="muted">—</span>':netCell(r.fl.pr)}</td>
     <td>${scBar(r.fa.score)}</td><td>${scBar(r.te.score)}</td><td>${scBar(r.fl.score)}</td><td>${scBar(r.se.score)}</td>
-    <td class="l"><span class="vd ${r.verdict.k}">${r.verdict.t}</span> <span class="muted">${r.total.toFixed(0)}</span></td></tr>`).join('')||
+    <td class="l"><span class="vd ${r.verdict.k}">${r.verdict.t}</span> </td></tr>`).join('')||
     `<tr><td colspan="15" class="empty">${onlyWatch?'Watchlist đang trống — chọn mã ở ô “Thêm mã” phía trên hoặc bấm ☆ ở trang Tổng quan.':'Không có mã phù hợp.'}</td></tr>`;
   document.querySelectorAll('#rows tr[data-t]').forEach(tr=>tr.onclick=()=>location.hash='#/'+tr.dataset.t);
   bindStars($('#rows'));
