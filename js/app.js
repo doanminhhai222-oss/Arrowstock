@@ -16,7 +16,8 @@ function toggleWL(t){const w=WL(),i=w.indexOf(t);i<0?w.push(t):w.splice(i,1);sto
 function updNav(){const n=WL().length;$('#wlc').textContent=n?`(${n})`:''}
 
 async function load(){
-  try{const r=await fetch('data/market.json',{cache:'no-store'});if(!r.ok)throw 0;MKT=await r.json()}catch(e){MKT=buildSimMarket()}
+  if(window.MARKET_DATA)MKT=window.MARKET_DATA;
+  else try{const r=await fetch('data/market.json',{cache:'no-store'});if(!r.ok)throw 0;MKT=await r.json()}catch(e){MKT=buildSimMarket()}
   try{const r=await fetch('data/news.json',{cache:'no-store'});if(r.ok)NEWS=await r.json()}catch(e){}
   R=VN30.filter(m=>MKT.stocks[m.t]).map(m=>analyze(m,normalize(MKT.stocks[m.t])));
   const live=MKT.source!=='sim';

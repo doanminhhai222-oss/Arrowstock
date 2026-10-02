@@ -9,7 +9,7 @@ Web tĩnh (HTML/CSS/JS, không cần build). Chạy: `python3 -m http.server 800
 
 ## Dữ liệu
 Mặc định dùng dữ liệu **mô phỏng** (js/sim.js) và chỉ số cơ bản **minh họa** (js/data.js). Để dùng dữ liệu thật:
-`pip install vnstock && python3 scripts/fetch_data.py` → tạo `data/market.json`, web tự nhận. Cần bổ sung khối ngoại/tự doanh và cập nhật chỉ số cơ bản từ BCTC; danh mục VN30 cần đối chiếu kỳ rà soát mới nhất.
+`pip3 install -U vnstock && python3 scripts/fetch_data.py` → tạo `data/market.json` và `data/market.js`; mở lại `index.html` (bấm đúp cũng được, không cần server). Cần bổ sung khối ngoại/tự doanh và cập nhật chỉ số cơ bản từ BCTC; danh mục VN30 cần đối chiếu kỳ rà soát mới nhất.
 
 Chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.
 
