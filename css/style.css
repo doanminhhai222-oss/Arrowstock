@@ -2,11 +2,11 @@
 *{box-sizing:border-box}html{color-scheme:light;scroll-behavior:smooth}
 body{margin:0;color:var(--tx);font:14px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(180deg,#cfeceb 0,#eaf5f5 420px,#f5fafa 100%) fixed}
 a{color:inherit;text-decoration:none}.muted{color:var(--mut)}
-.top{position:sticky;top:0;z-index:30;display:flex;gap:16px;justify-content:space-between;align-items:center;padding:10px 24px;background:rgba(255,255,255,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:30;display:flex;gap:16px;justify-content:flex-start;align-items:center;padding:10px 24px;background:rgba(255,255,255,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .brand{font-size:28px;font-weight:800;letter-spacing:-.5px;gap:10px;display:flex;gap:8px;align-items:center;color:var(--deep)}.brand b{color:var(--acc)}
 .brand small{font-size:12px;color:var(--mut);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-weight:600}
 .logo{width:46px;height:46px;flex:none;filter:drop-shadow(0 3px 8px #0e8a9c66)}
-nav.nav{display:flex;gap:4px}nav.nav a{padding:6px 14px;border-radius:99px;font-weight:600;color:var(--mut)}
+nav.nav{display:flex;gap:4px;margin-left:auto}nav.nav a{padding:6px 14px;border-radius:99px;font-weight:600;color:var(--mut)}
 nav.nav a:hover{background:var(--panel2);color:var(--tx)}nav.nav a.on{background:var(--deep);color:#fff}
 .top-r{display:flex;gap:10px;align-items:center;font-size:12px}
 .badge{padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
@@ -117,3 +117,9 @@ ul.chk li.ok b{color:var(--up)}ul.chk li.no b{color:var(--mut)}ul.chk li span{co
 .vd.tstrong{background:linear-gradient(135deg,#ffe9a8,#f3c24a);color:#5a3d00;border:1px solid #e0a526}
 .vd.tgood{background:#dff3f6;color:#0b6a78;border:1px solid #a6d9e1}
 .tag.good{background:#dff3f6;color:#0b6a78}
+
+table.rt{table-layout:fixed;min-width:760px}
+.rt th,.rt td{white-space:normal}
+.rt th.c,.rt td.c{text-align:center}
+.rt th:nth-child(1){width:21%}.rt th:nth-child(2){width:9%}.rt th:nth-child(3){width:9%}.rt th:nth-child(4),.rt th:nth-child(5),.rt th:nth-child(6){width:11%}.rt th:nth-child(7){width:14%}.rt th:nth-child(8){width:8%}.rt th:nth-child(9){width:6%}
+@media(max-width:1000px){.top{flex-wrap:wrap}nav.nav{margin-left:0}}
