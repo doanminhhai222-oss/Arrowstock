@@ -170,44 +170,20 @@ function analyze(m,s){
   const pos=[],neg=[];all.forEach(([k,p])=>p.bullets.forEach(b=>{(b.t==='pos'?pos:b.t==='neg'?neg:[]).push(`[${k}] ${b.x}`)}));
   const summary=`${m.t} được nhận định "${verdict.t}" (${total.toFixed(0)}/100). Kỹ thuật: ${te.phase.toLowerCase()}; dòng tiền: ${fl.state.toLowerCase()}; tâm lý: ${se.lbl.toLowerCase()}; cơ bản: ${fa.label.toLowerCase()}.`;
   const chg=k=>pct(close[n-1],close[n-1-k]);
-  return {m,s,C,ma,I,fa,te,fl,se,total,verdict,pos,neg,summary,events:autoEvents(S,s,ma),px:close[n-1],d1:chg(1),d5:chg(5),d20:chg(20)};
+  const res={m,s,C,ma,I,fa,te,fl,se,total,verdict,pos,neg,summary,events:autoEvents(S,s,ma),px:close[n-1],d1:chg(1),d5:chg(5),d20:chg(20)};res.sig=strongSignal(res);return res;
 }
 
-/* Khuyến nghị giao dịch (Pro): vùng mua, cắt lỗ, Target 1/2 từ xu hướng MA, hỗ trợ/kháng cự và ATR. */
-function analyzeTrade(r){
-  const {C,ma,te,fl,se,fa}=r,last=C.length-1,px=r.px,atr=Math.max(Ind.atr(C,14),px*.004),m=k=>ma[k][last];
-  const q=x=>Math.round(x*100)/100,clampv=(x,a,b)=>Math.max(a,Math.min(b,x));
-  const lo=n=>Math.min(...C.slice(-n).map(x=>x.l)),hi=n=>Math.max(...C.slice(-n).map(x=>x.h));
-  const lv=[['MA20',m(20)],['MA50',m(50)],['MA100',m(100)],['MA200',m(200)],['Đáy 20 phiên',lo(20)],['Đáy 60 phiên',lo(60)],['Đỉnh 20 phiên',hi(20)],['Đỉnh 60 phiên',hi(60)]];
-  const below=(p,x=0)=>lv.filter(l=>l[1]<p-x).sort((a,b)=>b[1]-a[1]),above=p=>lv.filter(l=>l[1]>p).sort((a,b)=>a[1]-b[1]);
-  const pos=[fa,te,fl,se].filter(p=>p.score>=62).length;
-  const hot=te.d20>8||te.rsi>=75||se.idx>=80,diverge=fl.fn.dir*fl.pr.dir<0;
-  let stance=r.total<44||(te.outlook==='bear'&&r.total<56)?'avoid':r.total>=56&&te.outlook!=='bear'?(hot?'pullback':'buy'):'wait';
-  const label={buy:'MUA',pullback:'CANH MUA KHI ĐIỀU CHỈNH',wait:'CHỜ XÁC NHẬN — MUA KHI BREAKOUT',avoid:r.total<44?'TRÁNH / GIẢM TỶ TRỌNG':'ĐỨNG NGOÀI — CHƯA CÓ ĐIỂM MUA'}[stance];
-  let conf=pos>=3&&r.total>=68?2:pos>=2&&r.total>=56?1:0;if(hot||diverge)conf=Math.max(0,conf-1);
-  const out={stance,label,conf:['Thấp','Trung bình','Cao'][conf],horizon:'Swing 2–6 tuần',notes:[],reasons:[],warn:[]};
-  if(MKT&&MKT.source==='sim')out.warn.push('Đang dùng dữ liệu MÔ PHỎNG — khuyến nghị chỉ để minh họa, không dùng để giao dịch.');
-  if(r.s.est)out.warn.push('Khối ngoại/tự doanh là số ước tính.');
-  if(diverge)out.warn.push('Khối ngoại và tự doanh đang đi ngược chiều.');
-  if(se.idx>=80)out.warn.push('Tâm lý đám đông quá hưng phấn — dễ có nhịp chỉnh.');
-  out.reasons=[...r.pos.slice(0,3),...r.neg.slice(0,2)];
-  if(stance==='avoid'){
-    const s=below(px)[0];
-    out.hold=s?`Nếu đang nắm giữ: cân nhắc giảm/cắt khi đóng cửa dưới ${q(s[1])} (${s[0]}).`:'Nếu đang nắm giữ: ưu tiên giảm tỷ trọng.';
-    out.recheck=`Chỉ cân nhắc lại khi giá đóng cửa trên MA20 (${q(m(20))}) kèm khối lượng > TB20 và điểm tổng hợp cải thiện.`;
-    return out;
-  }
-  let lo_,hi_,cond;
-  if(stance==='buy'){hi_=px;lo_=px-.5*atr;cond='Gom trong vùng giá hiện tại; không đuổi giá khi vượt quá cạnh trên của vùng.'}
-  else if(stance==='pullback'){const s=below(px,.8*atr).find(l=>/^MA/.test(l[0]))||below(px,.8*atr)[0];const b=s?s[1]:px-1.5*atr;lo_=b;hi_=b+.4*atr;
-    cond=`Giá đang quá nóng — chờ điều chỉnh về ${s?s[0]+' ':''}rồi mới mua, ưu tiên khi xuất hiện nến đảo chiều/khối lượng cạn.`}
-  else{const r1=above(px)[0],b=r1?r1[1]:px+.8*atr;lo_=b+.1*atr;hi_=b+.4*atr;cond=`Chỉ mua khi giá đóng cửa vượt ${q(b)}${r1?` (${r1[0]})`:''} với khối lượng > 1.2× TB20; chưa vượt thì đứng ngoài.`}
-  const e=(lo_+hi_)/2,sup=below(lo_)[0],risk=clampv(e-(sup?sup[1]-.5*atr:e-2*atr),1.2*atr,2.5*atr);
-  const stop=e-risk,res=above(hi_).map(x=>x[1]);
-  const t1=res.find(v=>v>=e+1.2*risk&&v<=e+3*risk)||e+1.5*risk,t2=res.find(v=>v>=Math.max(e+2.2*risk,t1*1.01)&&v<=e+4.5*risk)||Math.max(e+3*risk,t1*1.03);
-  const riskPct=risk/e*100;
-  Object.assign(out,{entry:{lo:q(lo_),hi:q(hi_),cond},stop:q(stop),t1:q(t1),t2:q(t2),rr1:(t1-e)/risk,rr2:(t2-e)/risk,riskPct,size:Math.min(30,1.5/riskPct*100),
-    stopWhy:sup?`dưới ${sup[0]} (${q(sup[1])}) thêm 0,5×ATR`:'theo biên độ ATR (2×ATR)',
-    invalid:`Kế hoạch vô hiệu nếu giá đóng cửa dưới ${q(stop)}${stance==='wait'?' hoặc breakout thất bại (đóng cửa quay lại dưới kháng cự)':''}.`});
-  return out;
+/* Radar tín hiệu xu hướng mạnh (Pro): chấm 5 tiêu chí từ kết quả phân tích sẵn có. Chỉ là phân tích xu hướng, không phải khuyến nghị đầu tư. */
+function strongSignal(r){
+  const {te,fl,se}=r,est=r.s.est,min=(typeof CONFIG!=='undefined'&&CONFIG.proMinCriteria)||5,sg=x=>(x>=0?'+':'')+x.toFixed(0);
+  const checks=[
+    {k:'trend',label:'Xu hướng mạnh',ok:te.score>=70&&te.above>=3&&te.outlook!=='bear',detail:`Kỹ thuật ${te.score.toFixed(0)}/100 · ${te.above}/4 MA · ${te.phase}`},
+    {k:'verdict',label:'Nhận định tích cực',ok:r.total>=62,detail:`${r.verdict.t} (${r.total.toFixed(0)}/100)`},
+    {k:'flow',label:'Dòng tiền mạnh',ok:(fl.state==='Bùng nổ'||fl.state==='Tăng')&&fl.score>=62&&fl.cmf>0,detail:`${fl.state} · GTGD ${fl.r5.toFixed(2)}× · CMF ${fl.cmf.toFixed(2)}`},
+    {k:'big',label:est?'Khối ngoại mua mạnh (ước tính)':'Khối ngoại + tự doanh cùng mua mạnh',
+      ok:est?fl.fn.dir>0&&fl.bp10>=1:fl.fn.dir>0&&fl.pr.dir>0&&fl.bp10>=1,
+      detail:est?`NN 5 phiên ${sg(fl.fn.s5)} tỷ (ước tính)`:`NN ${sg(fl.fn.s5)} tỷ · TD ${sg(fl.pr.s5)} tỷ (5 phiên) · ${fl.bp10.toFixed(1)}% GTGD`},
+    {k:'senti',label:'Tâm lý đám đông tốt',ok:se.idx>=55&&se.idx<80,detail:`Chỉ số ${se.idx.toFixed(0)}/100 · ${se.lbl}`}
+  ];
+  const n=checks.filter(c=>c.ok).length;return {checks,n,min,strong:n>=min};
 }

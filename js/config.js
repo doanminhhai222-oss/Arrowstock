@@ -1,5 +1,7 @@
 /* Cấu hình gói Pro. SỬA các giá trị này theo thực tế kinh doanh của bạn. */
 const CONFIG={
+  /* Số tiêu chí (trên 5) để một mã bị khóa là "tín hiệu mạnh". 5 = đủ cả 5 tiêu chí; 4 = nới lỏng. */
+  proMinCriteria:5,
   plans:[
     {id:'month',name:'Pro 1 tháng',price:'199.000đ',per:'/tháng',days:30},
     {id:'year',name:'Pro 1 năm',price:'1.490.000đ',per:'/năm',days:365,badge:'Tiết kiệm ~38%'}

@@ -7,6 +7,5 @@ const Ind={
  clv(x){return x.h===x.l?0:((x.c-x.l)-(x.h-x.c))/(x.h-x.l)},
  cmf(C,n=20){const i1=C.length,s=C.slice(i1-n);let a=0,b=0;s.forEach(x=>{a+=this.clv(x)*x.v;b+=x.v});return a/(b||1)},
  mfi(C,n=14){let p=0,q=0;for(let i=C.length-n;i<C.length;i++){const t=(C[i].h+C[i].l+C[i].c)/3,t0=(C[i-1].h+C[i-1].l+C[i-1].c)/3,f=t*C[i].v;t>t0?p+=f:q+=f}return 100-100/(1+p/(q||1))},
- atr(C,n=14){let s=0;for(let i=C.length-n;i<C.length;i++){const c=C[i],p=C[i-1].c;s+=Math.max(c.h-c.l,Math.abs(c.h-p),Math.abs(c.l-p))}return s/n},
  avg(a,i0,i1){let s=0;for(let i=i0;i<i1;i++)s+=a[i];return s/(i1-i0)}
 };

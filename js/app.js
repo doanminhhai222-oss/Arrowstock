@@ -15,6 +15,7 @@ const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 function lists(){let L=store.get('lists',null);if(!L){L=[{id:'l1',name:'Watchlist của tôi',tickers:store.get('wl',[])}];store.set('lists',L)}return L}
 const activeId=()=>{const L=lists(),a=store.get('activeList','');return L.find(x=>x.id===a)?a:L[0].id};
 const curList=()=>lists().find(x=>x.id===activeId());
+const VR=()=>proStatus().active?R:R.filter(r=>!r.sig.strong);
 const WL=()=>curList().tickers,inWL=t=>WL().includes(t);
 function toggleIn(id,t){const L=lists(),l=L.find(x=>x.id===id),i=l.tickers.indexOf(t);i<0?l.tickers.push(t):l.tickers.splice(i,1);store.set('lists',L);updNav()}
 const toggleWL=t=>toggleIn(activeId(),t);
@@ -40,7 +41,7 @@ function route(){
   const h=location.hash.replace(/^#\/?/,'');window.scrollTo(0,0);
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.n===(h==='watchlist'||h==='guide'||h==='pro'?h:(R.find(x=>x.m.t===h.toUpperCase())?'x':''))));
   window.__wlrefresh=null;const r=R.find(x=>x.m.t===h.toUpperCase());
-  if(h==='guide')guide();else if(h==='pro')proPage();else if(h==='watchlist')dash(true);else if(r)detail(r);else dash(false);
+  if(h==='guide')guide();else if(h==='pro')proPage();else if(h==='watchlist')dash(true);else if(r)(VR().includes(r)?detail(r):lockedPage());else dash(false);
 }
 addEventListener('hashchange',route);
 
@@ -54,10 +55,10 @@ const subs=o=>`<div class="subs">${Object.entries(o).map(([k,v])=>`<div><span>${
 const pillar=(title,p,extra='')=>`<div class="card"><div class="pill"><h2>${title}</h2><span class="n" style="color:${scCol(p.score)}">${p.score.toFixed(0)} · ${p.label}</span></div>${extra}${subs(p.sub)}${bl(p.bullets)}</div>`;
 
 /* ---------- DASHBOARD / WATCHLIST ---------- */
-function topN(k,dir,n=3){return [...R].sort((a,b)=>(a.fl[k].s5-b.fl[k].s5)*dir).slice(0,n).map(r=>`${r.m.t} <b class="${cl(r.fl[k].s5)}">${ty(r.fl[k].s5)}</b>`).join(' · ')}
+function topN(k,dir,n=3){return [...VR()].sort((a,b)=>(a.fl[k].s5-b.fl[k].s5)*dir).slice(0,n).map(r=>`${r.m.t} <b class="${cl(r.fl[k].s5)}">${ty(r.fl[k].s5)}</b>`).join(' · ')}
 function dash(onlyWatch){
   const cnt=k=>R.filter(r=>r.verdict.k===k).length,pos=cnt('sp')+cnt('p'),neg=cnt('ng')+cnt('sn'),N=R.length;
-  const burst=R.filter(r=>r.fl.state==='Bùng nổ'),dry=R.filter(r=>r.fl.state==='Cạn kiệt');
+  const burst=VR().filter(r=>r.fl.state==='Bùng nổ'),dry=VR().filter(r=>r.fl.state==='Cạn kiệt');
   const avgSe=R.reduce((a,r)=>a+r.se.idx,0)/N,above=R.reduce((a,r)=>a+(r.te.above>=3),0);
   const totCap=R.reduce((a,r)=>a+r.m.cap,0),wChg=R.reduce((a,r)=>a+r.d1*r.m.cap,0)/totCap;
   const sumF=R.reduce((a,r)=>a+r.fl.fn.s5,0),sumP=R.reduce((a,r)=>a+r.fl.pr.s5,0),est=R[0].s.est;
@@ -67,7 +68,7 @@ function dash(onlyWatch){
   app.innerHTML=(onlyWatch?`<div class="toolbar" style="margin-top:0">${lists().map(l=>`<button class="chip ${l.id===activeId()?'on':''}" data-list="${l.id}">${esc(l.name)} (${l.tickers.length})</button>`).join('')}<button class="chip" id="newList">+ Tạo list mới</button></div>
     <div class="wl-head"><h2>★ ${esc(curList().name)}</h2><button class="chip" id="renList">✎ Đổi tên</button><button class="chip" id="delList">🗑 Xóa list</button></div>
     <p class="muted" style="margin:0 0 10px">Bấm ☆ ở bất kỳ mã nào để thêm/bỏ khỏi list đang chọn. Lưu ngay trên trình duyệt này.</p>
-    <div class="toolbar" style="margin-top:0"><select id="addsel"><option value="">+ Thêm mã vào “${esc(curList().name)}”…</option>${R.filter(r=>!inWL(r.m.t)).map(r=>`<option>${r.m.t}</option>`).join('')}</select></div>`:`
+    <div class="toolbar" style="margin-top:0"><select id="addsel"><option value="">+ Thêm mã vào “${esc(curList().name)}”…</option>${VR().filter(r=>!inWL(r.m.t)).map(r=>`<option>${r.m.t}</option>`).join('')}</select></div>`:`
   <div class="hero"><h1>Nhìn rõ <em>xu hướng</em> &amp; dòng tiền<br>của VN30 + HDG</h1>
     <p>Chấm điểm từng mã theo 4 trụ cột — Cơ bản, Kỹ thuật, Dòng tiền lớn, Tâm lý đám đông — dựa trên MA 20/50/100/200, khối ngoại và tự doanh.</p>
     <div class="acts"><a class="btn" href="#/guide">Hướng dẫn sử dụng</a><a class="btn ghost" href="#/watchlist">★ Mở Watchlist</a></div></div>
@@ -94,6 +95,7 @@ function dash(onlyWatch){
   <div class="tw"><table><thead><tr><th></th>
     ${[['t','Mã','l'],['px','Giá'],['d1','%1D'],['d5','%5D'],['d20','%1T'],['phase','Xu hướng','l'],['flow','Dòng tiền','l'],['nn','NN 5D'],['td','TD 5D'],['fa','Cơ bản'],['te','Kỹ thuật'],['fl','DT lớn'],['se','Tâm lý'],['total','Nhận định','l']].map(([k,t,c])=>`<th class="${c||''}" data-s="${k}">${t}${state.sort===k?(state.dir<0?' ▼':' ▲'):''}</th>`).join('')}
   </tr></thead><tbody id="rows"></tbody></table></div>
+  ${lockNote()}
   <div class="legend">Điểm 0–100: <span class="s-p">■ ≥62 tích cực</span> · <span class="s-n">■ 45–61 trung lập</span> · <span class="s-ng">■ &lt;45 tiêu cực</span>. Tổng hợp = Kỹ thuật 35% + Dòng tiền lớn 25% + Cơ bản 20% + Tâm lý 20%. NN = khối ngoại, TD = tự doanh (mua/bán ròng 5 phiên, tỷ đồng). Bấm một mã để xem chi tiết, bấm ☆ để thêm Watchlist.</div>`;
   if(onlyWatch){$('#addsel').onchange=e=>{if(e.target.value){toggleWL(e.target.value);dash(true)}};
     document.querySelectorAll('[data-list]').forEach(b=>b.onclick=()=>{store.set('activeList',b.dataset.list);updNav();dash(true)});
@@ -110,13 +112,13 @@ function dash(onlyWatch){
 const key=(r,k)=>({t:r.m.t,px:r.px,d1:r.d1,d5:r.d5,d20:r.d20,phase:r.te.phase,flow:r.fl.r5,nn:r.fl.fn.s5,td:r.fl.pr.s5,fa:r.fa.score,te:r.te.score,fl:r.fl.score,se:r.se.score,total:r.total})[k];
 function rows(onlyWatch){
   const q=state.q.trim().toLowerCase(),v=state.verdict,w=WL();
-  let L=R.filter(r=>onlyWatch?w.includes(r.m.t):((!q||r.m.t.toLowerCase().includes(q)||r.m.n.toLowerCase().includes(q))&&(!state.sector||r.m.s===state.sector)&&
+  let L=VR().filter(r=>onlyWatch?w.includes(r.m.t):((!q||r.m.t.toLowerCase().includes(q)||r.m.n.toLowerCase().includes(q))&&(!state.sector||r.m.s===state.sector)&&
     (!v||(v==='pos'&&['sp','p'].includes(r.verdict.k))||(v==='neu'&&r.verdict.k==='n')||(v==='neg'&&['ng','sn'].includes(r.verdict.k))||(v==='burst'&&r.fl.state==='Bùng nổ')||(v==='dry'&&r.fl.state==='Cạn kiệt')||
     (v==='nnb'&&r.fl.fn.dir>0)||(v==='nns'&&r.fl.fn.dir<0)||(v==='tdb'&&r.fl.pr.dir>0))));
   L.sort((a,b)=>{const x=key(a,state.sort),y=key(b,state.sort);return(x>y?1:x<y?-1:0)*state.dir});
   const e=R[0].s.est;
   $('#rows').innerHTML=L.map(r=>`<tr data-t="${r.m.t}"><td>${starBtn(r.m.t)}</td>
-    <td class="l"><div class="tk">${r.m.t}${r.m.x?'<span class="tag">ngoài VN30</span>':''}</div><div class="tn">${r.m.n}</div></td>
+    <td class="l"><div class="tk">${r.m.t}${r.m.x?'<span class="tag">ngoài VN30</span>':''}${r.sig.strong?'<span class="tag gold">⭐ Tín hiệu mạnh</span>':''}</div><div class="tn">${r.m.n}</div></td>
     <td>${f(r.px)}</td><td class="${cl(r.d1)}">${sg(r.d1)}</td><td class="${cl(r.d5)}">${sg(r.d5)}</td><td class="${cl(r.d20)}">${sg(r.d20)}</td>
     <td class="l ph">${r.te.phase}</td>
     <td class="l"><span class="fs ${flowCls(r.fl.state)}">${r.fl.state}</span> <span class="muted">${r.fl.r5.toFixed(2)}×</span></td>
@@ -157,10 +159,10 @@ function detail(r){
     <div><span class="px">${f(r.px)}</span> <span class="${cl(r.d1)}">${sg(r.d1)}</span> <span class="muted">· 5D <b class="${cl(r.d5)}">${sg(r.d5)}</b> · 1T <b class="${cl(r.d20)}">${sg(r.d20)}</b> · Vốn hóa ~${m.cap} nghìn tỷ</span></div></div>
     <div style="display:flex;gap:14px;align-items:center"><span class="vd ${r.verdict.k}" style="font-size:16px;padding:6px 16px">${r.verdict.t}</span><div class="ring" style="--v:${r.total};--c:${col}"><div>${r.total.toFixed(0)}</div></div></div></div>
   <div class="inl"><span class="muted">Thêm vào danh sách:</span> ${lists().map(l=>`<button class="chip ${l.tickers.includes(m.t)?'on':''}" data-inlist="${l.id}">${esc(l.name)}</button>`).join('')}</div>
-  <div class="jump"><a href="#" data-j="s-pro">⭐ Khuyến nghị Pro</a><a href="#" data-j="s-chart">Biểu đồ</a><a href="#" data-j="s-flow">Khối ngoại &amp; Tự doanh</a><a href="#" data-j="s-an">Phân tích 4 trụ cột</a><a href="#" data-j="s-news">Tin tức &amp; Sự kiện</a><a href="#" data-j="s-note">Ghi chú</a></div>
+  <div class="jump"><a href="#" data-j="s-sig">Radar tín hiệu</a><a href="#" data-j="s-chart">Biểu đồ</a><a href="#" data-j="s-flow">Khối ngoại &amp; Tự doanh</a><a href="#" data-j="s-an">Phân tích 4 trụ cột</a><a href="#" data-j="s-news">Tin tức &amp; Sự kiện</a><a href="#" data-j="s-note">Ghi chú</a></div>
   <div class="verdict-box" style="--c:${col}"><b>Nhận định tổng hợp.</b> ${r.summary}
     <div class="grid g2" style="margin-top:10px"><div><b class="up">Điểm cộng</b>${bl(r.pos.slice(0,5).map(x=>({t:'pos',x})))}</div><div><b class="dn">Rủi ro</b>${bl(r.neg.slice(0,5).map(x=>({t:'neg',x})))}</div></div></div>
-  ${proSection(r)}
+  ${sigCard(r)}
   <section id="s-chart" class="card"><div class="ctl">
     ${[60,120,250].map(n=>`<button class="chip ${n===state.range?'on':''}" data-r="${n}">${n===60?'3 tháng':n===120?'6 tháng':'1 năm'}</button>`).join('')}
     <span style="width:10px"></span>${[20,50,100,200].map(k=>`<button class="chip" data-m="${k}"><span class="dot" style="background:${MA_COL[k]}"></span>MA${k}</button>`).join('')}</div>
@@ -189,9 +191,8 @@ function detail(r){
     <div class="pill" style="margin-top:14px"><h2 style="font-size:15px">Sự kiện nổi bật rút ra từ dữ liệu giá &amp; dòng tiền (60 phiên)</h2></div>
     ${r.events.length?bl(r.events):'<div class="sub">Không có sự kiện đáng chú ý trong 60 phiên gần nhất.</div>'}</section>
   <section id="s-note" class="card" style="margin-top:14px"><div class="pill"><h2>Ghi chú cá nhân về ${m.t}</h2><span class="sub">Lưu tự động trên trình duyệt này</span></div>
-    <textarea id="note" placeholder="Ví dụ: vùng mua 24–25, cắt lỗ dưới MA50, chờ báo cáo quý…">${(store.get('notes',{})[m.t]||'').replace(/</g,'&lt;')}</textarea></section>`;
+    <textarea id="note" placeholder="Ví dụ: theo dõi MA50, chờ báo cáo quý, xem lại khi dòng tiền cải thiện…">${(store.get('notes',{})[m.t]||'').replace(/</g,'&lt;')}</textarea></section>`;
   const ch=new StockChart($('#cv'),$('#tt'));ch.range=state.range;
-  if(proStatus().active){const t=analyzeTrade(r);if(t.entry)ch.levels=[{v:(t.entry.lo+t.entry.hi)/2,t:'Mua',c:'#0e8a9c'},{v:t.stop,t:'Cắt lỗ',c:'#d93025'},{v:t.t1,t:'T1',c:'#0f9d58'},{v:t.t2,t:'T2',c:'#0b7a42'}]}ch.set({C:r.C,ma:r.ma,s:r.s});
   const ms=store.get('ma',{20:1,50:1,100:1,200:1});ch.show={...ms};
   document.querySelectorAll('[data-m]').forEach(b=>{b.classList.toggle('on',!!ch.show[b.dataset.m]);b.onclick=()=>{const k=b.dataset.m;ch.show[k]=ch.show[k]?0:1;b.classList.toggle('on',!!ch.show[k]);store.set('ma',ch.show);ch.draw()}});
   ch.draw();
@@ -204,36 +205,31 @@ function detail(r){
   bindStars(app);
 }
 
-/* ---------- PRO: KHUYẾN NGHỊ ĐẦU TƯ ---------- */
-const pct1=(a,b)=>{const x=(a/b-1)*100;return (x>=0?'+':'')+f(x,1)+'%'};
-function proSection(r){
-  const m=r.m,st=proStatus();
-  if(!st.active)return `<section id="s-pro" class="card pro-card" style="margin-bottom:14px;min-height:210px"><div class="pill"><h2>⭐ Khuyến nghị đầu tư (Pro)</h2><span class="tag">Cần mở khóa</span></div>
-    <div class="pgrid blur" aria-hidden="true">${['Vùng mua','Cắt lỗ','Target 1','Target 2','R:R'].map(x=>`<div class="pc"><small>${x}</small><b>00,00</b></div>`).join('')}</div>
-    <div class="lock-cta"><b>🔒 Điểm vào lệnh · Cắt lỗ · Target 1 · Target 2</b><div class="sub">Kế hoạch giao dịch cho ${m.t} dựa trên xu hướng MA, dòng tiền lớn và tâm lý.</div><a class="btn" href="#/pro">Mở khóa Pro</a></div></section>`;
-  const t=analyzeTrade(r),why=bl([...r.pos.slice(0,3).map(x=>({t:'pos',x})),...r.neg.slice(0,2).map(x=>({t:'neg',x}))]);
-  const warn=t.warn.map(w=>`<div class="warnb">⚠ ${w}</div>`).join('');
-  let body;
-  if(t.stance==='avoid')body=`<p><b>Không khuyến nghị mua mới.</b> ${t.hold}</p><p>${t.recheck}</p>`;
-  else{const e=(t.entry.lo+t.entry.hi)/2;body=`<div class="pgrid">
-    <div class="pc e"><small>Vùng mua hợp lý</small><b>${f(t.entry.lo)} – ${f(t.entry.hi)}</b></div>
-    <div class="pc stop"><small>Cắt lỗ</small><b>${f(t.stop)}</b> <small>${pct1(t.stop,e)}</small></div>
-    <div class="pc t"><small>Target 1</small><b>${f(t.t1)}</b> <small>${pct1(t.t1,e)}</small></div>
-    <div class="pc t"><small>Target 2</small><b>${f(t.t2)}</b> <small>${pct1(t.t2,e)}</small></div>
-    <div class="pc"><small>R:R (T1 · T2)</small><b>1:${t.rr1.toFixed(1)} · 1:${t.rr2.toFixed(1)}</b></div></div>
-    <p><b>Điều kiện vào lệnh:</b> ${t.entry.cond}</p>
-    <p><b>Quản trị rủi ro:</b> cắt lỗ ${t.stopWhy} (rủi ro ~${f(t.riskPct,1)}%/lệnh). Tỷ trọng tối đa gợi ý ≤ ${f(t.size,0)}% danh mục nếu chấp nhận mất ~1,5% vốn khi chạm cắt lỗ. Chốt một phần ở Target 1, dời cắt lỗ lên giá vốn.</p>
-    <p><b>Vô hiệu kế hoạch:</b> ${t.invalid}</p>`}
-  return `<section id="s-pro" class="card pro-card" style="margin-bottom:14px"><div class="pill"><h2>⭐ Khuyến nghị đầu tư (Pro)</h2><span class="act ${t.stance}">${t.label}</span></div>
-    <div class="sub">Độ tin cậy: <b>${t.conf}</b> · Khung thời gian: ${t.horizon} · Hiệu lực tới ${st.end.toLocaleDateString('vi-VN')}</div>${warn}${body}
-    <details style="margin-top:8px"><summary>Cơ sở của khuyến nghị</summary>${why}</details>
-    <div class="sub" style="margin-top:8px">Chỉ mang tính tham khảo, không phải lời đề nghị mua/bán. Xem “Tuyên bố miễn trừ” cuối trang.</div></section>`;
+/* ---------- PRO: MÃ TÍN HIỆU MẠNH ---------- */
+const NOADV='Chỉ phân tích xu hướng, không phải khuyến nghị đầu tư.';
+function lockNote(){
+  if(proStatus().active)return '';const n=R.length-VR().length,m=CONFIG.proMinCriteria||5;
+  return n>0?`<div class="lockbar">🔒 Đang ẩn <b>${n}</b> mã đạt đủ ${m}/5 tiêu chí “tín hiệu xu hướng mạnh” (xu hướng mạnh · nhận định tích cực · dòng tiền mạnh · khối ngoại + tự doanh cùng mua mạnh · tâm lý tốt). <a class="btn" href="#/pro">Mở khóa Pro để xem</a></div>`
+    :`<div class="lockbar">⭐ Hôm nay chưa có mã nào đạt đủ ${m}/5 tiêu chí “tín hiệu xu hướng mạnh”. <a href="#/pro">Xem gói Pro</a></div>`;
+}
+function sigCard(r){
+  const g=r.sig;
+  return `<section id="s-sig" class="card sig-card" style="margin-bottom:14px"><div class="pill"><h2>Radar tín hiệu xu hướng</h2><span class="${g.strong?'tag gold big':'fs'}">${g.strong?'⭐ Tín hiệu mạnh · ':''}${g.n}/5 tiêu chí</span></div>
+    <ul class="chk">${g.checks.map(c=>`<li class="${c.ok?'ok':'no'}"><b>${c.ok?'✓':'✗'} ${c.label}</b><span>${c.detail}</span></li>`).join('')}</ul>
+    <div class="sub" style="margin-top:6px">${NOADV}${r.s.est?' Khối ngoại/tự doanh là số ước tính.':''}</div></section>`;
+}
+function lockedPage(){
+  app.innerHTML=`<a class="back" href="#/">← Danh sách</a><div class="card lockscreen"><div class="big">🔒 Mã thuộc nhóm “tín hiệu xu hướng mạnh” (Pro)</div>
+    <p>Mã này đạt đủ ${CONFIG.proMinCriteria||5}/5 tiêu chí: xu hướng mạnh, nhận định tích cực, dòng tiền mạnh, khối ngoại + tự doanh cùng mua mạnh, tâm lý đám đông tốt. Mở khóa Pro để xem mã và toàn bộ chỉ số phân tích.</p>
+    <a class="btn" href="#/pro">Mở khóa Pro</a><div class="sub" style="margin-top:10px">${NOADV}</div></div>`;
 }
 function proPage(){
   const st=proStatus(),py=CONFIG.payment,hasPay=py.bank||py.account||py.zalo||py.email,msg=state.promsg;state.promsg=null;
-  const stOrder={buy:0,pullback:1,wait:2,avoid:3};
-  const plans=`<div class="plans">${CONFIG.plans.map((p,i)=>`<div class="plan ${p.badge?'hot':''}"><h3 style="margin:0 0 6px;color:var(--deep)">${esc(p.name)} ${p.badge?`<span class="tag">${esc(p.badge)}</span>`:''}</h3><div class="price">${esc(p.price)} <small>${esc(p.per)}</small></div>
-    <ul class="b"><li class="pos">Vùng mua hợp lý cho từng mã</li><li class="pos">Target 1, Target 2 và R:R</li><li class="pos">Điểm cắt lỗ + tỷ trọng gợi ý</li><li class="pos">Bảng khuyến nghị toàn danh mục</li></ul></div>`).join('')}</div>`;
+  const strong=R.filter(r=>r.sig.strong),min=CONFIG.proMinCriteria||5;
+  const crit=`<div class="card"><h3>5 tiêu chí “tín hiệu xu hướng mạnh”</h3><ol style="margin:0;padding-left:20px;line-height:1.8"><li>Xu hướng mạnh (giá trên ≥3/4 đường MA 20/50/100/200, điểm kỹ thuật ≥70)</li><li>Nhận định tổng hợp tích cực (≥62/100)</li><li>Dòng tiền mạnh (bùng nổ/tăng, CMF dương)</li><li>Khối ngoại và tự doanh cùng mua ròng mạnh</li><li>Tâm lý đám đông tốt nhưng chưa quá nóng</li></ol>
+    <div class="sub" style="margin-top:6px">Mã đạt đủ ${min}/5 tiêu chí được xếp vào nhóm Pro. Hôm nay: <b>${strong.length}</b> mã.</div></div>`;
+  const plans=`<div class="plans">${CONFIG.plans.map(p=>`<div class="plan ${p.badge?'hot':''}"><h3 style="margin:0 0 6px;color:var(--deep)">${esc(p.name)} ${p.badge?`<span class="tag">${esc(p.badge)}</span>`:''}</h3><div class="price">${esc(p.price)} <small>${esc(p.per)}</small></div>
+    <ul class="b"><li class="pos">Xem các mã đạt “tín hiệu xu hướng mạnh”</li><li class="pos">Toàn bộ chỉ số phân tích của các mã đó</li><li class="pos">Radar 5 tiêu chí hằng ngày</li></ul></div>`).join('')}</div>`;
   const pay=`<div class="card"><h3>Cách mở khóa — 3 bước</h3><ol style="margin:0;padding-left:20px;line-height:1.9">
     <li><b>Chọn gói và thanh toán</b> (ngoài trang này — ArrowStock không thu thông tin thẻ trên trang).${hasPay?`<div class="kv" style="max-width:420px;margin:6px 0">${py.bank?`<span>Ngân hàng</span><span>${esc(py.bank)}</span>`:''}${py.account?`<span>Số tài khoản</span><span>${esc(py.account)}</span>`:''}${py.holder?`<span>Chủ tài khoản</span><span>${esc(py.holder)}</span>`:''}${py.note?`<span>Nội dung CK</span><span>${esc(py.note)}</span>`:''}</div>`:'<div class="warnb">Chủ trang chưa cấu hình thông tin thanh toán (js/config.js → payment).</div>'}</li>
     <li><b>Nhận mã kích hoạt</b> qua ${[py.zalo&&'Zalo '+esc(py.zalo),py.email&&esc(py.email)].filter(Boolean).join(' hoặc ')||'kênh liên hệ của chủ trang'}.</li>
@@ -241,21 +237,16 @@ function proPage(){
   const key=`<div class="card" style="margin-top:14px"><h3>${st.active?'Gia hạn / nhập mã mới':'Nhập mã kích hoạt'}</h3><div class="keyrow"><input id="lk" placeholder="ARROW-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"><button class="btn" id="lkb">Kích hoạt</button></div>
     <div class="msg ${msg?(msg.ok?'ok':'err'):''}">${msg?esc(msg.msg):(st.reason?esc(st.reason):'')}</div></div>`;
   const status=st.active?`<div class="card pro-card"><div class="pill"><h2>🔓 Đã mở khóa — ${esc(st.plan)}</h2><span class="n up">còn ${st.left} ngày</span></div><div class="sub">Hết hạn ${st.end.toLocaleDateString('vi-VN')}</div></div>`:'';
-  const table=st.active?`<h2 style="margin:18px 0 6px;color:var(--deep)">Bảng khuyến nghị toàn danh mục</h2>${MKT.source==='sim'?'<div class="warnb">⚠ Dữ liệu MÔ PHỎNG — chỉ để minh họa, không dùng để giao dịch.</div>':''}
-    <div class="toolbar" style="margin-top:6px">${[['','Tất cả'],['buy','MUA'],['pullback','Canh mua khi điều chỉnh'],['wait','Chờ breakout'],['avoid','Tránh']].map(([k,t])=>`<button class="chip ${(state.pst||'')===k?'on':''}" data-ps="${k}">${t}</button>`).join('')}</div>
-    <div class="tw"><table><thead><tr><th class="l">Mã</th><th>Giá</th><th class="l">Khuyến nghị</th><th>Vùng mua</th><th>Cắt lỗ</th><th>Target 1</th><th>Target 2</th><th>R:R (T2)</th><th class="l">Tin cậy</th></tr></thead><tbody id="prows"></tbody></table></div>`:'';
-  app.innerHTML=`<div class="hero"><h1>⭐ ArrowStock <em>Pro</em></h1><p>Khuyến nghị đầu tư cụ thể cho từng mã: vùng mua hợp lý, Target 1, Target 2 và điểm cắt lỗ — rút ra từ xu hướng MA, dòng tiền lớn, khối ngoại/tự doanh và tâm lý đám đông.</p></div>
-    ${status}${st.active?'':plans+pay}${key}${table}
-    <div class="legend" style="margin-top:14px">Khuyến nghị do công thức tự động tạo ra, không phải tư vấn đầu tư cá nhân hóa. Xem “Tuyên bố miễn trừ” cuối trang.</div>`;
+  const ck=g=>g.checks.map(c=>`<td class="${c.ok?'up':'muted'}" style="text-align:center">${c.ok?'✓':'–'}</td>`).join('');
+  const tbl=(list,title)=>`<h3 style="margin:16px 0 6px;color:var(--deep)">${title} (${list.length})</h3><div class="tw"><table style="min-width:0"><thead><tr><th class="l">Mã</th><th>Giá</th><th>%1D</th><th title="Xu hướng">XH</th><th title="Nhận định">NĐ</th><th title="Dòng tiền">DT</th><th title="Khối ngoại + tự doanh">NN+TD</th><th title="Tâm lý">TL</th><th>Điểm</th></tr></thead><tbody>${list.length?list.map(r=>`<tr data-t="${r.m.t}"><td class="l"><div class="tk">${r.m.t}</div><div class="tn">${r.m.n}</div></td><td>${f(r.px)}</td><td class="${cl(r.d1)}">${sg(r.d1)}</td>${ck(r.sig)}<td><b>${r.total.toFixed(0)}</b></td></tr>`).join(''):'<tr><td colspan="9" class="empty">Hôm nay chưa có mã nào.</td></tr>'}</tbody></table></div>`;
+  const radar=st.active?`<h2 style="margin:18px 0 0;color:var(--deep)">Radar tín hiệu xu hướng mạnh</h2>${MKT.source==='sim'?'<div class="warnb">⚠ Dữ liệu MÔ PHỎNG — chỉ để minh họa.</div>':''}${tbl(strong.sort((a,b)=>b.total-a.total),'Đạt đủ '+min+'/5 tiêu chí')}${tbl(R.filter(r=>r.sig.n===min-1).sort((a,b)=>b.total-a.total),'Gần đạt ('+(min-1)+'/5 tiêu chí)')}
+    <div class="legend">XH = xu hướng · NĐ = nhận định · DT = dòng tiền · NN+TD = khối ngoại + tự doanh · TL = tâm lý. ✓ = đạt tiêu chí. Bấm một mã để xem chi tiết.</div>`:'';
+  app.innerHTML=`<div class="hero"><h1>⭐ ArrowStock <em>Pro</em></h1><p>Mở khóa các mã đạt đồng thời 5 tiêu chí: xu hướng mạnh, nhận định tích cực, dòng tiền mạnh, khối ngoại + tự doanh cùng mua mạnh, tâm lý đám đông tốt — cùng toàn bộ chỉ số phân tích của các mã đó.</p></div>
+    ${status}${st.active?'':crit+plans+pay}${key}${radar}
+    <div class="legend" style="margin-top:14px"><b>${NOADV}</b> Xem “Tuyên bố miễn trừ” cuối trang.</div>`;
   $('#lkb').onclick=()=>{state.promsg=activateKey($('#lk').value);updNav();proPage()};
   $('#lk').onkeydown=e=>{if(e.key==='Enter')$('#lkb').click()};
-  if(st.active){
-    const rowsP=()=>{const v=state.pst||'';$('#prows').innerHTML=R.map(r=>({r,t:analyzeTrade(r)})).filter(x=>!v||x.t.stance===v)
-      .sort((a,b)=>stOrder[a.t.stance]-stOrder[b.t.stance]||b.r.total-a.r.total).map(({r,t})=>`<tr data-t="${r.m.t}"><td class="l"><div class="tk">${r.m.t}</div></td><td>${f(r.px)}</td>
-      <td class="l"><span class="act ${t.stance}">${t.label.split(' — ')[0]}</span></td>${t.entry?`<td>${f(t.entry.lo)} – ${f(t.entry.hi)}</td><td class="dn">${f(t.stop)}</td><td class="up">${f(t.t1)}</td><td class="up">${f(t.t2)}</td><td>1:${t.rr2.toFixed(1)}</td>`:'<td colspan="5" class="muted" style="text-align:center">Không khuyến nghị mua mới</td>'}<td class="l">${t.conf}</td></tr>`).join('');
-      document.querySelectorAll('#prows tr').forEach(tr=>tr.onclick=()=>location.hash='#/'+tr.dataset.t)};
-    document.querySelectorAll('[data-ps]').forEach(b=>b.onclick=()=>{state.pst=b.dataset.ps;document.querySelectorAll('[data-ps]').forEach(x=>x.classList.toggle('on',x===b));rowsP()});rowsP();
-  }
+  document.querySelectorAll('tbody tr[data-t]').forEach(tr=>tr.onclick=()=>location.hash='#/'+tr.dataset.t);
 }
 
 /* ---------- HƯỚNG DẪN ---------- */
@@ -272,7 +263,7 @@ function guide(){
   <details><summary>Tâm lý đám đông</summary><p>Chỉ số 0–100 (0 hoảng loạn, 100 cực kỳ hưng phấn) tính từ RSI, tỷ lệ khối lượng phiên tăng/giảm, độ lệch khỏi MA20, đà tăng 10 phiên và biến động. Hưng phấn vừa phải được chấm tốt; hưng phấn cực độ bị trừ điểm vì thường đi trước nhịp chỉnh (tín hiệu ngược đám đông).</p></details>
   <details><summary>Watchlist &amp; ghi chú</summary><p>Mở tab “★ Watchlist” để tạo nhiều danh sách có tên riêng (nút “+ Tạo list mới”), đổi tên hoặc xóa list. Bấm ☆ cạnh mã để thêm/bỏ khỏi list đang chọn; ở trang chi tiết có thể thêm mã vào nhiều list cùng lúc. Mỗi mã có ô ghi chú cá nhân. Dữ liệu lưu trong trình duyệt của bạn (không gửi đi đâu) — xóa dữ liệu trình duyệt hoặc đổi máy sẽ mất.</p></details>
   <details><summary>Tin tức</summary><p>Mỗi mã có các nút mở nhanh tin mới nhất trên Google News, Vietstock, CafeF… và mục “Sự kiện nổi bật” do hệ thống tự rút ra từ dữ liệu giá (breakout, khối lượng đột biến, golden/death cross, khối ngoại mua/bán đột biến). Muốn hiện tin ngay trong trang, thêm vào <code>data/news.json</code>.</p></details>
-  <details><summary>Gói Pro &amp; khuyến nghị đầu tư</summary><p>Mục “⭐ Pro” mở khóa khuyến nghị giao dịch cho từng mã: <b>vùng mua hợp lý, cắt lỗ, Target 1, Target 2, R:R và tỷ trọng gợi ý</b>. Mức giá được tính từ các đường MA, đáy/đỉnh 20–60 phiên (hỗ trợ/kháng cự) và biên độ dao động ATR; trạng thái khuyến nghị lấy từ điểm tổng hợp, xu hướng, độ nóng của giá và tâm lý. Gồm 4 trạng thái: MUA, CANH MUA KHI ĐIỀU CHỈNH, CHỜ XÁC NHẬN (mua khi breakout), TRÁNH. Mở khóa bằng mã kích hoạt nhận sau khi thanh toán (xem trang Pro). Đây là kế hoạch tham khảo, không phải lời đề nghị mua/bán.</p></details>
+  <details><summary>Gói Pro &amp; mã “tín hiệu xu hướng mạnh”</summary><p>Mỗi mã được chấm 5 tiêu chí: <b>xu hướng mạnh, nhận định tích cực, dòng tiền mạnh, khối ngoại + tự doanh cùng mua mạnh, tâm lý đám đông tốt</b>. Mã đạt đủ 5/5 được xếp vào nhóm Pro: người dùng gói miễn phí không thấy mã đó, người đã mở khóa xem được mã và toàn bộ chỉ số phân tích, kèm bảng Radar trên trang ⭐ Pro. Mọi mã khác đều xem miễn phí, kể cả phần Radar n/5 tiêu chí ở trang chi tiết. Mở khóa bằng mã kích hoạt nhận sau khi thanh toán (xem trang Pro). <b>Đây chỉ là phân tích xu hướng, không phải khuyến nghị đầu tư.</b></p></details>
   <details><summary>Về dữ liệu — đọc kỹ</summary><p>Nếu góc trên bên phải ghi <b>“Dữ liệu MÔ PHỎNG”</b> nghĩa là giá, khối lượng, khối ngoại, tự doanh đều là số giả lập để minh họa giao diện và thuật toán — <b>không dùng để ra quyết định</b>. Chỉ số cơ bản (P/E, ROE…) là số ước chừng. Nạp dữ liệu thật theo hướng dẫn trong README (<code>scripts/fetch_data.py</code> → <code>data/market.json</code>). HDG không thuộc rổ VN30, được thêm riêng để theo dõi. Mọi nhận định chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.</p></details>`;
 }
 load();

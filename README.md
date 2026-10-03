@@ -26,10 +26,10 @@ Nếu không có file, trang chỉ hiện nút mở tin trên Google News/Vietst
 ## Khối ngoại / tự doanh thật
 `data/market.json` nhận thêm `"foreign":[...]` và `"prop":[...]` (tỷ đồng, mua ròng dương, cùng độ dài với `candles`). Thiếu thì web ước tính.
 
-## Gói Pro — khuyến nghị đầu tư trả phí
-Mục ⭐ Pro mở khóa **vùng mua, cắt lỗ, Target 1, Target 2, R:R, tỷ trọng gợi ý** cho từng mã (`analyzeTrade` trong `js/analysis.js`) và bảng khuyến nghị toàn danh mục.
-- **Cấu hình gói/giá/thông tin nhận tiền:** `js/config.js` (giá mặc định chỉ là ví dụ — tự đặt giá; để trống `payment` thì trang hiện hướng dẫn liên hệ).
-- **Tạo mã kích hoạt:** `python3 scripts/make_license.py "Pro 1 tháng" 30 5` → in 5 mã gửi khách (bí mật) + các dòng băm SHA-256 dán vào `licenses` trong `js/config.js`. Mã demo `ARROW-DEMO-2026` (3 ngày) — **xóa dòng demo trước khi bán**.
-- **Giới hạn quan trọng:** trang là web tĩnh nên khóa chỉ là rào cản mềm (ai mở DevTools vẫn xem được logic/số liệu). Muốn khóa thật phải có backend: tính khuyến nghị ở server, cấp token sau khi thanh toán (PayOS/Stripe/VietQR + serverless function), kiểm tra token mỗi lần tải.
-- **Pháp lý:** thu phí cho khuyến nghị mua/bán chứng khoán ở Việt Nam có thể thuộc hoạt động tư vấn đầu tư chứng khoán cần giấy phép — hãy hỏi luật sư/UBCKNN trước khi bán thật.
-- Trang không thu thông tin thẻ; thanh toán thực hiện ngoài trang.
+## Gói Pro — mã "tín hiệu xu hướng mạnh" (trả phí)
+Mỗi mã được chấm 5 tiêu chí (`strongSignal` trong `js/analysis.js`): xu hướng mạnh · nhận định tích cực · dòng tiền mạnh · khối ngoại + tự doanh cùng mua mạnh · tâm lý đám đông tốt. Mã đạt đủ `proMinCriteria` tiêu chí (mặc định 5) bị **khóa**: người chưa trả phí không thấy mã đó (bảng, tìm kiếm, top khối ngoại/tự doanh, watchlist, trang chi tiết); người đã mở khóa xem được mã, toàn bộ chỉ số phân tích và bảng Radar ở trang ⭐ Pro. Các mã khác xem miễn phí.
+- **Quyết định sản phẩm (đã chốt):** web **chỉ phân tích xu hướng, không phải khuyến nghị đầu tư**. Tính năng "khuyến nghị" (vùng mua, cắt lỗ, Target) đã bị gỡ vì rủi ro pháp lý. Cảnh báo hiển thị ở thanh dưới header, thẻ Radar, trang Pro và footer "Tuyên bố miễn trừ". Giữ ngôn ngữ trung tính, không dùng "nên mua / mục tiêu giá".
+- **Cấu hình:** `js/config.js` (gói/giá ví dụ, thông tin nhận tiền — để trống thì trang hiện hướng dẫn liên hệ, `proMinCriteria`).
+- **Tạo mã kích hoạt:** `python3 scripts/make_license.py "Pro 1 tháng" 30 5` → in 5 mã gửi khách (bí mật, không commit) + dòng băm SHA-256 dán vào `licenses` trong `js/config.js`. Mã demo `ARROW-DEMO-2026` (3 ngày) — **xóa dòng demo trước khi bán**.
+- **Giới hạn:** web tĩnh nên khóa chỉ là rào cản mềm (mở DevTools vẫn đọc được dữ liệu). Khóa thật cần backend (tính/chỉ trả dữ liệu mã Pro từ server sau khi thanh toán).
+- **Pháp lý:** dù đã bỏ khuyến nghị, danh sách "mã mạnh" bán thu phí vẫn có thể bị xem là chọn mã — hỏi luật sư/UBCKNN trước khi bán thật. Trang không thu thông tin thẻ.
