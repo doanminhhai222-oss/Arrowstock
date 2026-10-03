@@ -175,7 +175,7 @@ function analyze(m,s){
 
 /* Radar tín hiệu xu hướng mạnh (Pro): chấm 5 tiêu chí từ kết quả phân tích sẵn có. Chỉ là phân tích xu hướng, không phải khuyến nghị đầu tư. */
 function strongSignal(r){
-  const {te,fl,se}=r,est=r.s.est,min=(typeof CONFIG!=='undefined'&&CONFIG.proMinCriteria)||5,sg=x=>(x>=0?'+':'')+x.toFixed(0);
+  const {te,fl,se}=r,est=r.s.est,T=(typeof CONFIG!=='undefined'&&CONFIG.proTiers)||{strong:5,good:4},sg=x=>(x>=0?'+':'')+x.toFixed(0);
   const checks=[
     {k:'trend',label:'Xu hướng mạnh',ok:te.score>=70&&te.above>=3&&te.outlook!=='bear',detail:`Kỹ thuật ${te.score.toFixed(0)}/100 · ${te.above}/4 MA · ${te.phase}`},
     {k:'verdict',label:'Nhận định tích cực',ok:r.total>=62,detail:`${r.verdict.t} (${r.total.toFixed(0)}/100)`},
@@ -185,5 +185,6 @@ function strongSignal(r){
       detail:est?`NN 5 phiên ${sg(fl.fn.s5)} tỷ (ước tính)`:`NN ${sg(fl.fn.s5)} tỷ · TD ${sg(fl.pr.s5)} tỷ (5 phiên) · ${fl.bp10.toFixed(1)}% GTGD`},
     {k:'senti',label:'Tâm lý đám đông tốt',ok:se.idx>=55&&se.idx<80,detail:`Chỉ số ${se.idx.toFixed(0)}/100 · ${se.lbl}`}
   ];
-  const n=checks.filter(c=>c.ok).length;return {checks,n,min,strong:n>=min};
+  const n=checks.filter(c=>c.ok).length;const tier=n>=T.strong?'strong':n>=T.good?'good':null;
+  return {checks,n,tier,strong:tier==='strong',good:tier==='good',locked:!!tier,tierLabel:tier==='strong'?'Tín hiệu mạnh':tier==='good'?'Tín hiệu tốt':''};
 }
