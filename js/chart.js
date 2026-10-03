@@ -1,7 +1,7 @@
 /* Biểu đồ nến + MA + khối lượng + dòng tiền lớn, vẽ bằng canvas (không phụ thuộc thư viện ngoài). */
 const MA_COL={20:'#e0a526',50:'#0e8a9c',100:'#7c4dff',200:'#e0457b'};
 class StockChart{
-  constructor(canvas,tip){this.cv=canvas;this.tip=tip;this.hover=-1;this.range=120;this.show={20:1,50:1,100:1,200:1};
+  constructor(canvas,tip){this.cv=canvas;this.tip=tip;this.hover=-1;this.levels=[];this.range=120;this.show={20:1,50:1,100:1,200:1};
     const mv=e=>{const r=canvas.getBoundingClientRect();this.hover=this.idxAt(e.clientX-r.left);this.draw()};
     canvas.addEventListener('pointermove',mv);canvas.addEventListener('pointerdown',mv);
     canvas.addEventListener('pointerleave',()=>{this.hover=-1;this.draw()});
@@ -16,6 +16,7 @@ class StockChart{
     this.L={x0,w:pw,n,s:st};
     const vis=C.slice(st);let mn=Math.min(...vis.map(x=>x.l)),mx=Math.max(...vis.map(x=>x.h));
     [20,50,100,200].forEach(k=>{if(this.show[k])for(let i=st;i<N;i++){const v=ma[k][i];if(v!=null){mn=Math.min(mn,v);mx=Math.max(mx,v)}}});
+    (this.levels||[]).forEach(l=>{mn=Math.min(mn,l.v);mx=Math.max(mx,l.v)});
     const pad=(mx-mn)*.06;mn-=pad;mx+=pad;const Y=v=>yP+hP*(1-(v-mn)/(mx-mn)),X=i=>x0+(i-st+.5)*cw;
     g.font='11px system-ui';g.textBaseline='middle';g.strokeStyle='#dbe8ea';g.fillStyle='#5b7886';g.lineWidth=1;
     for(let k=0;k<=4;k++){const v=mn+(mx-mn)*k/4,y=Y(v);g.beginPath();g.moveTo(x0,y);g.lineTo(x0+pw,y);g.stroke();g.textAlign='left';g.fillText(v.toFixed(2),x0+pw+5,y)}
@@ -25,6 +26,8 @@ class StockChart{
     [20,50,100,200].forEach(k=>{if(!this.show[k])return;g.strokeStyle=MA_COL[k];g.lineWidth=1.5;g.beginPath();let on=0;
       for(let i=st;i<N;i++){const v=ma[k][i];if(v==null)continue;on?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v));on=1}g.stroke()});
     g.lineWidth=1;
+    (this.levels||[]).forEach(l=>{const y=Y(l.v);g.save();g.strokeStyle=l.c;g.fillStyle=l.c;g.setLineDash([6,4]);g.lineWidth=1.5;g.beginPath();g.moveTo(x0,y);g.lineTo(x0+pw,y);g.stroke();g.setLineDash([]);
+      g.font='bold 11px system-ui';g.textAlign='left';const t=l.t+' '+l.v.toFixed(2),w=g.measureText(t).width+8;g.fillStyle=l.c;g.fillRect(x0+4,y-16,w,15);g.fillStyle='#fff';g.fillText(t,x0+8,y-8);g.restore()});
     // khối lượng
     const mv=Math.max(...vis.map(x=>x.v),...this.vma.slice(st).map(v=>v||0));
     vis.forEach((c,j)=>{const i=st+j,h=hV*c.v/mv,burst=this.vma[i]&&c.v>1.5*this.vma[i];g.fillStyle=(c.c>=c.o?'#0f9d58':'#d93025')+(burst?'':'88');g.fillRect(X(i)-Math.max(1,cw*.7)/2,yV+hV-h,Math.max(1,cw*.7),h);

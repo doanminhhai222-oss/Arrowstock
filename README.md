@@ -25,3 +25,11 @@ Nếu không có file, trang chỉ hiện nút mở tin trên Google News/Vietst
 
 ## Khối ngoại / tự doanh thật
 `data/market.json` nhận thêm `"foreign":[...]` và `"prop":[...]` (tỷ đồng, mua ròng dương, cùng độ dài với `candles`). Thiếu thì web ước tính.
+
+## Gói Pro — khuyến nghị đầu tư trả phí
+Mục ⭐ Pro mở khóa **vùng mua, cắt lỗ, Target 1, Target 2, R:R, tỷ trọng gợi ý** cho từng mã (`analyzeTrade` trong `js/analysis.js`) và bảng khuyến nghị toàn danh mục.
+- **Cấu hình gói/giá/thông tin nhận tiền:** `js/config.js` (giá mặc định chỉ là ví dụ — tự đặt giá; để trống `payment` thì trang hiện hướng dẫn liên hệ).
+- **Tạo mã kích hoạt:** `python3 scripts/make_license.py "Pro 1 tháng" 30 5` → in 5 mã gửi khách (bí mật) + các dòng băm SHA-256 dán vào `licenses` trong `js/config.js`. Mã demo `ARROW-DEMO-2026` (3 ngày) — **xóa dòng demo trước khi bán**.
+- **Giới hạn quan trọng:** trang là web tĩnh nên khóa chỉ là rào cản mềm (ai mở DevTools vẫn xem được logic/số liệu). Muốn khóa thật phải có backend: tính khuyến nghị ở server, cấp token sau khi thanh toán (PayOS/Stripe/VietQR + serverless function), kiểm tra token mỗi lần tải.
+- **Pháp lý:** thu phí cho khuyến nghị mua/bán chứng khoán ở Việt Nam có thể thuộc hoạt động tư vấn đầu tư chứng khoán cần giấy phép — hãy hỏi luật sư/UBCKNN trước khi bán thật.
+- Trang không thu thông tin thẻ; thanh toán thực hiện ngoài trang.

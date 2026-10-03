@@ -19,7 +19,7 @@ const WL=()=>curList().tickers,inWL=t=>WL().includes(t);
 function toggleIn(id,t){const L=lists(),l=L.find(x=>x.id===id),i=l.tickers.indexOf(t);i<0?l.tickers.push(t):l.tickers.splice(i,1);store.set('lists',L);updNav()}
 const toggleWL=t=>toggleIn(activeId(),t);
 function nameOk(n,exceptId){n=(n||'').trim().slice(0,30);if(!n)return null;if(lists().some(l=>l.id!==exceptId&&l.name.toLowerCase()===n.toLowerCase())){alert('Tên này đã có, hãy chọn tên khác.');return null}return n}
-function updNav(){const n=WL().length;$('#wlc').textContent=n?`(${n})`:''}
+function updNav(){const n=WL().length;$('#wlc').textContent=n?`(${n})`:'';$('#prob').textContent=proStatus().active?'🔓':''}
 
 async function load(){
   if(window.MARKET_DATA)MKT=window.MARKET_DATA;
@@ -38,9 +38,9 @@ function normalize(s){
 }
 function route(){
   const h=location.hash.replace(/^#\/?/,'');window.scrollTo(0,0);
-  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.n===(h==='watchlist'||h==='guide'?h:(R.find(x=>x.m.t===h.toUpperCase())?'x':''))));
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.n===(h==='watchlist'||h==='guide'||h==='pro'?h:(R.find(x=>x.m.t===h.toUpperCase())?'x':''))));
   window.__wlrefresh=null;const r=R.find(x=>x.m.t===h.toUpperCase());
-  if(h==='guide')guide();else if(h==='watchlist')dash(true);else if(r)detail(r);else dash(false);
+  if(h==='guide')guide();else if(h==='pro')proPage();else if(h==='watchlist')dash(true);else if(r)detail(r);else dash(false);
 }
 addEventListener('hashchange',route);
 
@@ -157,9 +157,10 @@ function detail(r){
     <div><span class="px">${f(r.px)}</span> <span class="${cl(r.d1)}">${sg(r.d1)}</span> <span class="muted">· 5D <b class="${cl(r.d5)}">${sg(r.d5)}</b> · 1T <b class="${cl(r.d20)}">${sg(r.d20)}</b> · Vốn hóa ~${m.cap} nghìn tỷ</span></div></div>
     <div style="display:flex;gap:14px;align-items:center"><span class="vd ${r.verdict.k}" style="font-size:16px;padding:6px 16px">${r.verdict.t}</span><div class="ring" style="--v:${r.total};--c:${col}"><div>${r.total.toFixed(0)}</div></div></div></div>
   <div class="inl"><span class="muted">Thêm vào danh sách:</span> ${lists().map(l=>`<button class="chip ${l.tickers.includes(m.t)?'on':''}" data-inlist="${l.id}">${esc(l.name)}</button>`).join('')}</div>
-  <div class="jump"><a href="#" data-j="s-chart">Biểu đồ</a><a href="#" data-j="s-flow">Khối ngoại &amp; Tự doanh</a><a href="#" data-j="s-an">Phân tích 4 trụ cột</a><a href="#" data-j="s-news">Tin tức &amp; Sự kiện</a><a href="#" data-j="s-note">Ghi chú</a></div>
+  <div class="jump"><a href="#" data-j="s-pro">⭐ Khuyến nghị Pro</a><a href="#" data-j="s-chart">Biểu đồ</a><a href="#" data-j="s-flow">Khối ngoại &amp; Tự doanh</a><a href="#" data-j="s-an">Phân tích 4 trụ cột</a><a href="#" data-j="s-news">Tin tức &amp; Sự kiện</a><a href="#" data-j="s-note">Ghi chú</a></div>
   <div class="verdict-box" style="--c:${col}"><b>Nhận định tổng hợp.</b> ${r.summary}
     <div class="grid g2" style="margin-top:10px"><div><b class="up">Điểm cộng</b>${bl(r.pos.slice(0,5).map(x=>({t:'pos',x})))}</div><div><b class="dn">Rủi ro</b>${bl(r.neg.slice(0,5).map(x=>({t:'neg',x})))}</div></div></div>
+  ${proSection(r)}
   <section id="s-chart" class="card"><div class="ctl">
     ${[60,120,250].map(n=>`<button class="chip ${n===state.range?'on':''}" data-r="${n}">${n===60?'3 tháng':n===120?'6 tháng':'1 năm'}</button>`).join('')}
     <span style="width:10px"></span>${[20,50,100,200].map(k=>`<button class="chip" data-m="${k}"><span class="dot" style="background:${MA_COL[k]}"></span>MA${k}</button>`).join('')}</div>
@@ -189,7 +190,8 @@ function detail(r){
     ${r.events.length?bl(r.events):'<div class="sub">Không có sự kiện đáng chú ý trong 60 phiên gần nhất.</div>'}</section>
   <section id="s-note" class="card" style="margin-top:14px"><div class="pill"><h2>Ghi chú cá nhân về ${m.t}</h2><span class="sub">Lưu tự động trên trình duyệt này</span></div>
     <textarea id="note" placeholder="Ví dụ: vùng mua 24–25, cắt lỗ dưới MA50, chờ báo cáo quý…">${(store.get('notes',{})[m.t]||'').replace(/</g,'&lt;')}</textarea></section>`;
-  const ch=new StockChart($('#cv'),$('#tt'));ch.range=state.range;ch.set({C:r.C,ma:r.ma,s:r.s});
+  const ch=new StockChart($('#cv'),$('#tt'));ch.range=state.range;
+  if(proStatus().active){const t=analyzeTrade(r);if(t.entry)ch.levels=[{v:(t.entry.lo+t.entry.hi)/2,t:'Mua',c:'#0e8a9c'},{v:t.stop,t:'Cắt lỗ',c:'#d93025'},{v:t.t1,t:'T1',c:'#0f9d58'},{v:t.t2,t:'T2',c:'#0b7a42'}]}ch.set({C:r.C,ma:r.ma,s:r.s});
   const ms=store.get('ma',{20:1,50:1,100:1,200:1});ch.show={...ms};
   document.querySelectorAll('[data-m]').forEach(b=>{b.classList.toggle('on',!!ch.show[b.dataset.m]);b.onclick=()=>{const k=b.dataset.m;ch.show[k]=ch.show[k]?0:1;b.classList.toggle('on',!!ch.show[k]);store.set('ma',ch.show);ch.draw()}});
   ch.draw();
@@ -200,6 +202,60 @@ function detail(r){
   window.__wlrefresh=()=>{const L=lists();document.querySelectorAll('[data-inlist]').forEach(b=>b.classList.toggle('on',L.find(x=>x.id===b.dataset.inlist).tickers.includes(m.t)));
     document.querySelectorAll('.dh [data-star]').forEach(x=>{const on=inWL(m.t);x.classList.toggle('on',on);x.textContent=on?'★':'☆'})};
   bindStars(app);
+}
+
+/* ---------- PRO: KHUYẾN NGHỊ ĐẦU TƯ ---------- */
+const pct1=(a,b)=>{const x=(a/b-1)*100;return (x>=0?'+':'')+f(x,1)+'%'};
+function proSection(r){
+  const m=r.m,st=proStatus();
+  if(!st.active)return `<section id="s-pro" class="card pro-card" style="margin-bottom:14px;min-height:210px"><div class="pill"><h2>⭐ Khuyến nghị đầu tư (Pro)</h2><span class="tag">Cần mở khóa</span></div>
+    <div class="pgrid blur" aria-hidden="true">${['Vùng mua','Cắt lỗ','Target 1','Target 2','R:R'].map(x=>`<div class="pc"><small>${x}</small><b>00,00</b></div>`).join('')}</div>
+    <div class="lock-cta"><b>🔒 Điểm vào lệnh · Cắt lỗ · Target 1 · Target 2</b><div class="sub">Kế hoạch giao dịch cho ${m.t} dựa trên xu hướng MA, dòng tiền lớn và tâm lý.</div><a class="btn" href="#/pro">Mở khóa Pro</a></div></section>`;
+  const t=analyzeTrade(r),why=bl([...r.pos.slice(0,3).map(x=>({t:'pos',x})),...r.neg.slice(0,2).map(x=>({t:'neg',x}))]);
+  const warn=t.warn.map(w=>`<div class="warnb">⚠ ${w}</div>`).join('');
+  let body;
+  if(t.stance==='avoid')body=`<p><b>Không khuyến nghị mua mới.</b> ${t.hold}</p><p>${t.recheck}</p>`;
+  else{const e=(t.entry.lo+t.entry.hi)/2;body=`<div class="pgrid">
+    <div class="pc e"><small>Vùng mua hợp lý</small><b>${f(t.entry.lo)} – ${f(t.entry.hi)}</b></div>
+    <div class="pc stop"><small>Cắt lỗ</small><b>${f(t.stop)}</b> <small>${pct1(t.stop,e)}</small></div>
+    <div class="pc t"><small>Target 1</small><b>${f(t.t1)}</b> <small>${pct1(t.t1,e)}</small></div>
+    <div class="pc t"><small>Target 2</small><b>${f(t.t2)}</b> <small>${pct1(t.t2,e)}</small></div>
+    <div class="pc"><small>R:R (T1 · T2)</small><b>1:${t.rr1.toFixed(1)} · 1:${t.rr2.toFixed(1)}</b></div></div>
+    <p><b>Điều kiện vào lệnh:</b> ${t.entry.cond}</p>
+    <p><b>Quản trị rủi ro:</b> cắt lỗ ${t.stopWhy} (rủi ro ~${f(t.riskPct,1)}%/lệnh). Tỷ trọng tối đa gợi ý ≤ ${f(t.size,0)}% danh mục nếu chấp nhận mất ~1,5% vốn khi chạm cắt lỗ. Chốt một phần ở Target 1, dời cắt lỗ lên giá vốn.</p>
+    <p><b>Vô hiệu kế hoạch:</b> ${t.invalid}</p>`}
+  return `<section id="s-pro" class="card pro-card" style="margin-bottom:14px"><div class="pill"><h2>⭐ Khuyến nghị đầu tư (Pro)</h2><span class="act ${t.stance}">${t.label}</span></div>
+    <div class="sub">Độ tin cậy: <b>${t.conf}</b> · Khung thời gian: ${t.horizon} · Hiệu lực tới ${st.end.toLocaleDateString('vi-VN')}</div>${warn}${body}
+    <details style="margin-top:8px"><summary>Cơ sở của khuyến nghị</summary>${why}</details>
+    <div class="sub" style="margin-top:8px">Chỉ mang tính tham khảo, không phải lời đề nghị mua/bán. Xem “Tuyên bố miễn trừ” cuối trang.</div></section>`;
+}
+function proPage(){
+  const st=proStatus(),py=CONFIG.payment,hasPay=py.bank||py.account||py.zalo||py.email,msg=state.promsg;state.promsg=null;
+  const stOrder={buy:0,pullback:1,wait:2,avoid:3};
+  const plans=`<div class="plans">${CONFIG.plans.map((p,i)=>`<div class="plan ${p.badge?'hot':''}"><h3 style="margin:0 0 6px;color:var(--deep)">${esc(p.name)} ${p.badge?`<span class="tag">${esc(p.badge)}</span>`:''}</h3><div class="price">${esc(p.price)} <small>${esc(p.per)}</small></div>
+    <ul class="b"><li class="pos">Vùng mua hợp lý cho từng mã</li><li class="pos">Target 1, Target 2 và R:R</li><li class="pos">Điểm cắt lỗ + tỷ trọng gợi ý</li><li class="pos">Bảng khuyến nghị toàn danh mục</li></ul></div>`).join('')}</div>`;
+  const pay=`<div class="card"><h3>Cách mở khóa — 3 bước</h3><ol style="margin:0;padding-left:20px;line-height:1.9">
+    <li><b>Chọn gói và thanh toán</b> (ngoài trang này — ArrowStock không thu thông tin thẻ trên trang).${hasPay?`<div class="kv" style="max-width:420px;margin:6px 0">${py.bank?`<span>Ngân hàng</span><span>${esc(py.bank)}</span>`:''}${py.account?`<span>Số tài khoản</span><span>${esc(py.account)}</span>`:''}${py.holder?`<span>Chủ tài khoản</span><span>${esc(py.holder)}</span>`:''}${py.note?`<span>Nội dung CK</span><span>${esc(py.note)}</span>`:''}</div>`:'<div class="warnb">Chủ trang chưa cấu hình thông tin thanh toán (js/config.js → payment).</div>'}</li>
+    <li><b>Nhận mã kích hoạt</b> qua ${[py.zalo&&'Zalo '+esc(py.zalo),py.email&&esc(py.email)].filter(Boolean).join(' hoặc ')||'kênh liên hệ của chủ trang'}.</li>
+    <li><b>Nhập mã</b> vào ô bên dưới để mở khóa ngay.</li></ol></div>`;
+  const key=`<div class="card" style="margin-top:14px"><h3>${st.active?'Gia hạn / nhập mã mới':'Nhập mã kích hoạt'}</h3><div class="keyrow"><input id="lk" placeholder="ARROW-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"><button class="btn" id="lkb">Kích hoạt</button></div>
+    <div class="msg ${msg?(msg.ok?'ok':'err'):''}">${msg?esc(msg.msg):(st.reason?esc(st.reason):'')}</div></div>`;
+  const status=st.active?`<div class="card pro-card"><div class="pill"><h2>🔓 Đã mở khóa — ${esc(st.plan)}</h2><span class="n up">còn ${st.left} ngày</span></div><div class="sub">Hết hạn ${st.end.toLocaleDateString('vi-VN')}</div></div>`:'';
+  const table=st.active?`<h2 style="margin:18px 0 6px;color:var(--deep)">Bảng khuyến nghị toàn danh mục</h2>${MKT.source==='sim'?'<div class="warnb">⚠ Dữ liệu MÔ PHỎNG — chỉ để minh họa, không dùng để giao dịch.</div>':''}
+    <div class="toolbar" style="margin-top:6px">${[['','Tất cả'],['buy','MUA'],['pullback','Canh mua khi điều chỉnh'],['wait','Chờ breakout'],['avoid','Tránh']].map(([k,t])=>`<button class="chip ${(state.pst||'')===k?'on':''}" data-ps="${k}">${t}</button>`).join('')}</div>
+    <div class="tw"><table><thead><tr><th class="l">Mã</th><th>Giá</th><th class="l">Khuyến nghị</th><th>Vùng mua</th><th>Cắt lỗ</th><th>Target 1</th><th>Target 2</th><th>R:R (T2)</th><th class="l">Tin cậy</th></tr></thead><tbody id="prows"></tbody></table></div>`:'';
+  app.innerHTML=`<div class="hero"><h1>⭐ ArrowStock <em>Pro</em></h1><p>Khuyến nghị đầu tư cụ thể cho từng mã: vùng mua hợp lý, Target 1, Target 2 và điểm cắt lỗ — rút ra từ xu hướng MA, dòng tiền lớn, khối ngoại/tự doanh và tâm lý đám đông.</p></div>
+    ${status}${st.active?'':plans+pay}${key}${table}
+    <div class="legend" style="margin-top:14px">Khuyến nghị do công thức tự động tạo ra, không phải tư vấn đầu tư cá nhân hóa. Xem “Tuyên bố miễn trừ” cuối trang.</div>`;
+  $('#lkb').onclick=()=>{state.promsg=activateKey($('#lk').value);updNav();proPage()};
+  $('#lk').onkeydown=e=>{if(e.key==='Enter')$('#lkb').click()};
+  if(st.active){
+    const rowsP=()=>{const v=state.pst||'';$('#prows').innerHTML=R.map(r=>({r,t:analyzeTrade(r)})).filter(x=>!v||x.t.stance===v)
+      .sort((a,b)=>stOrder[a.t.stance]-stOrder[b.t.stance]||b.r.total-a.r.total).map(({r,t})=>`<tr data-t="${r.m.t}"><td class="l"><div class="tk">${r.m.t}</div></td><td>${f(r.px)}</td>
+      <td class="l"><span class="act ${t.stance}">${t.label.split(' — ')[0]}</span></td>${t.entry?`<td>${f(t.entry.lo)} – ${f(t.entry.hi)}</td><td class="dn">${f(t.stop)}</td><td class="up">${f(t.t1)}</td><td class="up">${f(t.t2)}</td><td>1:${t.rr2.toFixed(1)}</td>`:'<td colspan="5" class="muted" style="text-align:center">Không khuyến nghị mua mới</td>'}<td class="l">${t.conf}</td></tr>`).join('');
+      document.querySelectorAll('#prows tr').forEach(tr=>tr.onclick=()=>location.hash='#/'+tr.dataset.t)};
+    document.querySelectorAll('[data-ps]').forEach(b=>b.onclick=()=>{state.pst=b.dataset.ps;document.querySelectorAll('[data-ps]').forEach(x=>x.classList.toggle('on',x===b));rowsP()});rowsP();
+  }
 }
 
 /* ---------- HƯỚNG DẪN ---------- */
@@ -216,6 +272,7 @@ function guide(){
   <details><summary>Tâm lý đám đông</summary><p>Chỉ số 0–100 (0 hoảng loạn, 100 cực kỳ hưng phấn) tính từ RSI, tỷ lệ khối lượng phiên tăng/giảm, độ lệch khỏi MA20, đà tăng 10 phiên và biến động. Hưng phấn vừa phải được chấm tốt; hưng phấn cực độ bị trừ điểm vì thường đi trước nhịp chỉnh (tín hiệu ngược đám đông).</p></details>
   <details><summary>Watchlist &amp; ghi chú</summary><p>Mở tab “★ Watchlist” để tạo nhiều danh sách có tên riêng (nút “+ Tạo list mới”), đổi tên hoặc xóa list. Bấm ☆ cạnh mã để thêm/bỏ khỏi list đang chọn; ở trang chi tiết có thể thêm mã vào nhiều list cùng lúc. Mỗi mã có ô ghi chú cá nhân. Dữ liệu lưu trong trình duyệt của bạn (không gửi đi đâu) — xóa dữ liệu trình duyệt hoặc đổi máy sẽ mất.</p></details>
   <details><summary>Tin tức</summary><p>Mỗi mã có các nút mở nhanh tin mới nhất trên Google News, Vietstock, CafeF… và mục “Sự kiện nổi bật” do hệ thống tự rút ra từ dữ liệu giá (breakout, khối lượng đột biến, golden/death cross, khối ngoại mua/bán đột biến). Muốn hiện tin ngay trong trang, thêm vào <code>data/news.json</code>.</p></details>
+  <details><summary>Gói Pro &amp; khuyến nghị đầu tư</summary><p>Mục “⭐ Pro” mở khóa khuyến nghị giao dịch cho từng mã: <b>vùng mua hợp lý, cắt lỗ, Target 1, Target 2, R:R và tỷ trọng gợi ý</b>. Mức giá được tính từ các đường MA, đáy/đỉnh 20–60 phiên (hỗ trợ/kháng cự) và biên độ dao động ATR; trạng thái khuyến nghị lấy từ điểm tổng hợp, xu hướng, độ nóng của giá và tâm lý. Gồm 4 trạng thái: MUA, CANH MUA KHI ĐIỀU CHỈNH, CHỜ XÁC NHẬN (mua khi breakout), TRÁNH. Mở khóa bằng mã kích hoạt nhận sau khi thanh toán (xem trang Pro). Đây là kế hoạch tham khảo, không phải lời đề nghị mua/bán.</p></details>
   <details><summary>Về dữ liệu — đọc kỹ</summary><p>Nếu góc trên bên phải ghi <b>“Dữ liệu MÔ PHỎNG”</b> nghĩa là giá, khối lượng, khối ngoại, tự doanh đều là số giả lập để minh họa giao diện và thuật toán — <b>không dùng để ra quyết định</b>. Chỉ số cơ bản (P/E, ROE…) là số ước chừng. Nạp dữ liệu thật theo hướng dẫn trong README (<code>scripts/fetch_data.py</code> → <code>data/market.json</code>). HDG không thuộc rổ VN30, được thêm riêng để theo dõi. Mọi nhận định chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.</p></details>`;
 }
 load();

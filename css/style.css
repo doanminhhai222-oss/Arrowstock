@@ -95,3 +95,20 @@ td.ph{white-space:normal;min-width:90px;max-width:130px;line-height:1.3}
 .wl-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 2px}.wl-head h2{margin:0 12px 0 0;color:var(--deep)}
 .inl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 @media(max-width:760px){.brand{font-size:22px}.logo{width:38px;height:38px}.jump{top:100px}}
+
+.foot h4{margin:0 0 6px;font-size:13px;color:#46606c;letter-spacing:.03em}.foot p{margin:0 0 8px;line-height:1.6}
+.pro-card{position:relative;overflow:hidden;border-left:5px solid var(--gold)}
+.pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:10px 0}
+@media(max-width:900px){.pgrid{grid-template-columns:repeat(2,1fr)}}
+.pc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px}.pc small{display:block;color:var(--mut);font-size:12px}.pc b{font-size:19px}
+.pc.stop b{color:var(--dn)}.pc.t b{color:var(--up)}.pc.e b{color:var(--acc)}
+.blur{filter:blur(7px);user-select:none;pointer-events:none}
+.lock-cta{position:absolute;inset:48px 0 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(180deg,#ffffff22,#ffffffcc);text-align:center;padding:10px}
+.act{display:inline-block;padding:5px 14px;border-radius:99px;font-weight:800;font-size:13px}
+.act.buy{background:#0f9d58;color:#fff}.act.pullback{background:#d9f5e5;color:#0b7a42;border:1px solid #8fd8b0}.act.wait{background:#fff1cf;color:#8a5a00}.act.avoid{background:#fde4e1;color:#b3261e;border:1px solid #f3aaa4}
+.warnb{background:#fff7e0;border:1px solid #f1cf7a;color:#7a5200;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:13px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:14px 0}
+.plan{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:18px}.plan.hot{border-color:var(--gold)}
+.plan .price{font-size:30px;font-weight:800;color:var(--deep)}.plan .price small{font-size:14px;color:var(--mut);font-weight:600}
+.keyrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.keyrow input{flex:1;min-width:220px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;letter-spacing:.06em;text-transform:uppercase}
+.msg{margin-top:6px;font-weight:600}.msg.ok{color:var(--up)}.msg.err{color:var(--dn)}
