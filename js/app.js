@@ -20,7 +20,7 @@ const WL=()=>curList().tickers,inWL=t=>WL().includes(t);
 function toggleIn(id,t){const L=lists(),l=L.find(x=>x.id===id),i=l.tickers.indexOf(t);i<0?l.tickers.push(t):l.tickers.splice(i,1);store.set('lists',L);updNav()}
 const toggleWL=t=>toggleIn(activeId(),t);
 function nameOk(n,exceptId){n=(n||'').trim().slice(0,30);if(!n)return null;if(lists().some(l=>l.id!==exceptId&&l.name.toLowerCase()===n.toLowerCase())){alert('Tên này đã có, hãy chọn tên khác.');return null}return n}
-function updNav(){const n=WL().length;$('#wlc').textContent=n?`(${n})`:'';$('#prob').textContent=proStatus().active?'🔓':''}
+function updNav(){const n=WL().length;$('#wlc').textContent=n?`(${n})`:'';$('#prob').textContent=proStatus().active?'🔓':'';if(typeof updAcc==='function')updAcc()}
 
 async function load(){
   if(window.MARKET_DATA)MKT=window.MARKET_DATA;
@@ -29,7 +29,7 @@ async function load(){
   R=VN30.filter(m=>MKT.stocks[m.t]).map(m=>analyze(m,normalize(MKT.stocks[m.t])));
   const live=MKT.source!=='sim';
   $('#srcBadge').className='badge '+(live?'live':'sim');$('#srcBadge').textContent=live?'Dữ liệu thực':'Dữ liệu MÔ PHỎNG';
-  $('#asOf').textContent='Phiên '+MKT.asOf;updNav();route();
+  $('#asOf').textContent='Phiên '+MKT.asOf;updNav();route();if(typeof initWidgets==='function')initWidgets();
 }
 /* Nếu nguồn thật không có khối ngoại/tự doanh -> ước tính từ vị trí đóng cửa (CLV × GTGD), gắn cờ est. */
 function normalize(s){
@@ -39,9 +39,10 @@ function normalize(s){
 }
 function route(){
   const h=location.hash.replace(/^#\/?/,'');window.scrollTo(0,0);
-  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.n===(h==='watchlist'||h==='guide'||h==='pro'?h:(R.find(x=>x.m.t===h.toUpperCase())?'x':''))));
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.n===(h==='watchlist'||h==='guide'||h==='pro'||h==='account'?h:(R.find(x=>x.m.t===h.toUpperCase())?'x':''))));
   window.__wlrefresh=null;const r=R.find(x=>x.m.t===h.toUpperCase());
-  if(h==='guide')guide();else if(h==='pro')proPage();else if(h==='watchlist')dash(true);else if(r)(VR().includes(r)?detail(r):lockedPage());else dash(false);
+  if(h==='guide')guide();else if(h==='pro')proPage();else if(h==='account')accountPage();else if(h==='watchlist')dash(true);else if(r)(VR().includes(r)?detail(r):lockedPage());else dash(false);
+  if(typeof renderAds==='function')renderAds();
 }
 addEventListener('hashchange',route);
 
@@ -72,6 +73,7 @@ function dash(onlyWatch){
   <div class="hero"><h1>Nhìn rõ <em>xu hướng</em> &amp; dòng tiền<br>của VN30 + HDG</h1>
     <p>Chấm điểm từng mã theo 4 trụ cột — Cơ bản, Kỹ thuật, Dòng tiền lớn, Tâm lý đám đông — dựa trên MA 20/50/100/200, khối ngoại và tự doanh.</p>
     <div class="acts"><a class="btn" href="#/guide">Hướng dẫn sử dụng</a><a class="btn ghost" href="#/watchlist">★ Mở Watchlist</a></div></div>
+  <div class="ad ad-mid" data-slot="mid"></div>
   <div class="grid g4">
     <div class="card"><h3>Nhận định tổng hợp</h3><div class="big ${pos>neg?'up':pos<neg?'dn':''}">${pos} tích cực · ${neg} tiêu cực</div>
       <div class="dist">${seg.map(([k,c])=>`<i style="width:${cnt(k)/N*100}%;background:${c}"></i>`).join('')}</div><div class="sub">${cnt('sp')} mạnh · ${cnt('p')} tích cực · ${cnt('n')} trung lập · ${cnt('ng')} tiêu cực · ${cnt('sn')} rất xấu</div></div>
@@ -167,6 +169,7 @@ function detail(r){
   <div class="jump"><a href="#" data-j="s-sig">Radar tín hiệu</a><a href="#" data-j="s-chart">Biểu đồ</a><a href="#" data-j="s-flow">Khối ngoại &amp; Tự doanh</a><a href="#" data-j="s-an">Phân tích 4 trụ cột</a><a href="#" data-j="s-news">Tin tức &amp; Sự kiện</a><a href="#" data-j="s-note">Ghi chú</a></div>
   <div class="verdict-box" style="--c:${col}"><b>Nhận định tổng hợp.</b> ${r.summary}
     <div class="grid g2" style="margin-top:10px"><div><b class="up">Điểm cộng</b>${bl(r.pos.slice(0,5).map(x=>({t:'pos',x})))}</div><div><b class="dn">Rủi ro</b>${bl(r.neg.slice(0,5).map(x=>({t:'neg',x})))}</div></div></div>
+  <div class="ad ad-mid" data-slot="mid"></div>
   ${sigCard(r)}
   <section id="s-chart" class="card"><div class="ctl">
     ${[60,120,250].map(n=>`<button class="chip ${n===state.range?'on':''}" data-r="${n}">${n===60?'3 tháng':n===120?'6 tháng':'1 năm'}</button>`).join('')}
@@ -272,6 +275,7 @@ function guide(){
   <details><summary>Watchlist &amp; ghi chú</summary><p>Mở tab “★ Watchlist” để tạo nhiều danh sách có tên riêng (nút “+ Tạo list mới”), đổi tên hoặc xóa list. Bấm ☆ cạnh mã để thêm/bỏ khỏi list đang chọn; ở trang chi tiết có thể thêm mã vào nhiều list cùng lúc. Mỗi mã có ô ghi chú cá nhân. Dữ liệu lưu trong trình duyệt của bạn (không gửi đi đâu) — xóa dữ liệu trình duyệt hoặc đổi máy sẽ mất.</p></details>
   <details><summary>Tin tức</summary><p>Mỗi mã có các nút mở nhanh tin mới nhất trên Google News, Vietstock, CafeF… và mục “Sự kiện nổi bật” do hệ thống tự rút ra từ dữ liệu giá (breakout, khối lượng đột biến, golden/death cross, khối ngoại mua/bán đột biến). Muốn hiện tin ngay trong trang, thêm vào <code>data/news.json</code>.</p></details>
   <details><summary>Gói Pro: Tín hiệu mạnh &amp; Tín hiệu tốt</summary><p>Mỗi mã được chấm 5 tiêu chí: <b>xu hướng mạnh, nhận định tích cực, dòng tiền mạnh, khối ngoại + tự doanh cùng mua mạnh, tâm lý đám đông tốt</b>. Đạt <b>5/5 = ⭐ Tín hiệu mạnh</b>, đạt <b>4/5 = ✓ Tín hiệu tốt</b>. Với gói miễn phí, các mã thuộc hai nhóm này hiện thành dòng 🔒 — ẩn tên mã, giá, %1D, %5D, NN 5D và TD 5D; các cột còn lại (%1T, xu hướng, dòng tiền, điểm 4 trụ cột, nhận định) vẫn hiển thị. Mở khóa Pro để xem tên mã, giá, khối ngoại/tự doanh, trang chi tiết cùng bảng Radar. Các mã còn lại (≤3/5) xem miễn phí, kèm Radar n/5 tiêu chí ở trang chi tiết. <b>Đây chỉ là phân tích xu hướng, không phải khuyến nghị đầu tư.</b></p></details>
+  <details><summary>Tài khoản, hỗ trợ &amp; liên hệ</summary><p><b>👤 Tài khoản:</b> tạo hồ sơ trên thiết bị hoặc đăng nhập bằng Google (khi quản trị viên đã bật); xem gói Pro, ngày hết hạn và nhập mã gia hạn (mã mới được cộng dồn vào thời hạn còn lại). Trang chưa có máy chủ nên hồ sơ và gói Pro chỉ lưu trong trình duyệt đang dùng. <b>💬 Hỗ trợ:</b> nút ở góc dưới bên phải — trợ lý tự động trả lời về chức năng, gói Pro, thanh toán, gia hạn; nhập “góp ý” hoặc “báo lỗi” để gửi phản ánh cho quản trị viên (qua Zalo, email hoặc biểu mẫu). <b>Liên hệ:</b> thông tin quản trị viên ở góc trên bên phải. Muốn đặt quảng cáo, bấm vào ô “Quảng cáo” hoặc nhắn trợ lý.</p></details>
   <details><summary>Về dữ liệu — đọc kỹ</summary><p>Nếu góc trên bên phải ghi <b>“Dữ liệu MÔ PHỎNG”</b> nghĩa là giá, khối lượng, khối ngoại, tự doanh đều là số giả lập để minh họa giao diện và thuật toán — <b>không dùng để ra quyết định</b>. Chỉ số cơ bản (P/E, ROE…) là số ước chừng. Nạp dữ liệu thật theo hướng dẫn trong README (<code>scripts/fetch_data.py</code> → <code>data/market.json</code>). HDG không thuộc rổ VN30, được thêm riêng để theo dõi. Mọi nhận định chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.</p></details>`;
 }
 load();

@@ -17,13 +17,13 @@ const normKey=k=>(k||'').toUpperCase().replace(/\s+/g,'');
 function proStatus(){
   const l=store.get('license',null);if(!l)return {active:false};
   const lic=CONFIG.licenses.find(x=>x.h===l.h);if(!lic)return {active:false,reason:'Mã không còn hiệu lực'};
-  const end=new Date(l.start).getTime()+lic.days*864e5,left=Math.ceil((end-Date.now())/864e5);
+  const end=new Date(l.start).getTime()+lic.days*864e5+(l.bonus||0),left=Math.ceil((end-Date.now())/864e5);
   return left>0?{active:true,plan:lic.plan,left,end:new Date(end)}:{active:false,reason:'Gói đã hết hạn',plan:lic.plan};
 }
 function activateKey(raw){
   const h=sha256(normKey(raw)),lic=CONFIG.licenses.find(x=>x.h===h);
   if(!lic)return {ok:false,msg:'Mã không hợp lệ. Kiểm tra lại cách gõ (không phân biệt hoa/thường).'};
-  const old=store.get('license',null);
-  store.set('license',old&&old.h===h?old:{h,start:new Date().toISOString()});
+  const old=store.get('license',null),cur=proStatus();
+  if(!(old&&old.h===h))store.set('license',{h,start:new Date().toISOString(),bonus:cur.active?Math.max(0,cur.end.getTime()-Date.now()):0});
   const s=proStatus();return s.active?{ok:true,msg:`Đã kích hoạt “${s.plan}”, còn ${s.left} ngày.`}:{ok:false,msg:'Mã này đã hết hạn.'};
 }
